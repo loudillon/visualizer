@@ -1119,6 +1119,9 @@ function registerNode(node) {
   node.fired = false;
   node.turnoverEvents = [];
   node.firingEvents = [];
+  node.shieldingActive = false;
+  node.shieldingSeed = null;
+  node.shieldingStartedMonth = null;
   node.replacementCount = 0;
   node.occupantSeed = node.seed;
   node.special = node.special || null;
@@ -1144,6 +1147,9 @@ function resetRuntimeState() {
     node.fired = false;
     node.turnoverEvents = [];
     node.firingEvents = [];
+    node.shieldingActive = false;
+    node.shieldingSeed = null;
+    node.shieldingStartedMonth = null;
     node.replacementCount = 0;
     node.occupantSeed = node.seed;
   }
@@ -1242,7 +1248,7 @@ function getBranchMetrics(lane, typeMap = null) {
   return { ...counts, total, weightedDensity, cleanShare, exodusPressure, exodusTriggered };
 }
 
-function getShieldingManager(manager) {
+function canManagerStartShielding(manager) {
   if (!manager || manager.level !== 4 || manager.currentType !== 'N') return false;
   const director = manager.parentId ? NODE_MAP.get(manager.parentId) : null;
   if (!director || (director.currentType !== 'T' && director.currentType !== 'I')) return false;
@@ -1257,6 +1263,29 @@ function getShieldingManager(manager) {
 
   chance = Math.max(0.10, Math.min(0.72, chance));
   return runRandom(manager.occupantSeed, 732) < chance;
+}
+
+function activateManagerShielding(manager, months) {
+  if (!manager || manager.level !== 4 || manager.currentType !== 'N') return false;
+
+  if (manager.shieldingActive && manager.shieldingSeed === manager.occupantSeed) {
+    return true;
+  }
+
+  if (!canManagerStartShielding(manager)) return false;
+
+  manager.shieldingActive = true;
+  manager.shieldingSeed = manager.occupantSeed;
+  manager.shieldingStartedMonth = months;
+  return true;
+}
+
+function getShieldingManager(manager) {
+  if (!manager || manager.level !== 4 || manager.currentType !== 'N') return false;
+  if (!manager.shieldingActive || manager.shieldingSeed !== manager.occupantSeed) return false;
+
+  const director = manager.parentId ? NODE_MAP.get(manager.parentId) : null;
+  return Boolean(director && (director.currentType === 'T' || director.currentType === 'I'));
 }
 
 function isShieldingManagerAtRisk(manager) {
@@ -1868,6 +1897,9 @@ function computeTraitType(node, parent) {
 function replaceOccupant(node, months) {
   node.replacementCount += 1;
   node.occupantSeed = hashSeed(`${node.id}:replacement:${node.replacementCount}:month:${months}:run:${STATE.runSeed}`);
+  node.shieldingActive = false;
+  node.shieldingSeed = null;
+  node.shieldingStartedMonth = null;
 }
 
 function isMoralResistor(node) {
@@ -2192,6 +2224,12 @@ function computeOneMonthStep(months) {
 
       const parent = NODE_MAP.get(node.parentId);
 
+      // Shielding is an occupant-level stance. Once a clean manager starts shielding,
+      // it persists until that manager is fired, turns over, or is manually/forcibly changed.
+      if (node.level === 4 && prior === 'N') {
+        activateManagerShielding(node, months);
+      }
+
       // Captured behavior tends to persist. Under strong *effective* accountability,
       // some captured people/teams can become clean/resistant again.
       if (prior === 'I') {
@@ -2226,6 +2264,13 @@ function computeOneMonthStep(months) {
         node.currentType = replacementType;
         node.turnovered = true;
         node.turnoverEvents.push({ months, replacementType });
+        continue;
+      }
+
+      // Active shielding managers do not silently become captured in the same month.
+      // They remain clean unless a visible firing/turnover/manual event removes them.
+      if (node.level === 4 && getShieldingManager(node)) {
+        node.currentType = 'N';
         continue;
       }
 
@@ -2322,6 +2367,7 @@ function renderNode(node) {
         `${parent ? `\nParent: ${TYPE_NAMES[parent.currentType]}` : ''}` +
         `${node.turnoverEvents && node.turnoverEvents.length ? `\nTurnover events: ${node.turnoverEvents.length}` : ''}` +
         `${node.firingEvents && node.firingEvents.length ? `\nFiring events: ${node.firingEvents.length}` : ''}` +
+        `${node.level === 4 && getShieldingManager(node) ? `\nManager is actively shielding ICs` : ''}` +
         `${!node.special && isMoralResistor(node) ? `\nCurrent occupant: high moral/empathy resistance` : ''}` +
         `${node.id === OVERSIGHT_NODE_ID ? `\nEffective counterweights: ${getEffectiveCounterweights()} / 100` : ''}` +
         `${node.id === BOARD_NODE_ID ? `\nThis node can police or fail to police oversight.` : ''}`;
@@ -2419,7 +2465,7 @@ function updateUiText() {
   } else if (STATE.timeMonths <= 12) {
     note.textContent = 'Months 1–12: executive signaling and harmful doctrine begin shaping branch behavior. If People / Legal / Compliance is captured, effective accountability is crushed but not erased. If the board is compromised too, then it effectively bottoms out.';
   } else if (STATE.timeMonths <= 24) {
-    note.textContent = 'Year 1–2: directors begin selecting managers who fit the local culture. Some clean managers actively shield their four ICs from a hostile director — but that now raises the manager’s own risk of being pushed out or fired.';
+    note.textContent = 'Year 1–2: directors begin selecting managers who fit the local culture. Some clean managers actively shield their four ICs from a hostile director. Shielding now persists until that manager is fired, turns over, or is manually changed — and it raises the manager’s own risk.';
   } else if (STATE.timeMonths <= 36) {
     note.textContent = 'Year 2–3: hiring, promotion, and turnover begin changing who remains. Toxic branches now build exodus pressure gradually; once it gets high enough, clean people start leaving in waves instead of tripping a cartoon cliff.';
   } else {
@@ -2528,12 +2574,18 @@ function playSimulation() {
   btn.textContent = 'Stop cinematic simulation';
   btn.classList.add('playing');
 
-  let month = 0;
-  startFreshRun({ rerollInitial: false, resetTime: true });
-  btn.textContent = 'Stop cinematic simulation';
-  btn.classList.add('playing');
+  // Playback must not reroll, reset to month 0, or repaint the current month on click.
+  // It should start from exactly what is already displayed, then advance on the next tick.
+  clearTimeout(STATE.computeDebounce);
+  for (const timer of STATE.renderTimers) clearTimeout(timer);
+  STATE.renderTimers = [];
+  STATE.renderToken++;
+
+  let month = Number(STATE.timeMonths) || 0;
 
   const advance = () => {
+    month += 1;
+
     if (month > 60) {
       stopPlayback();
       return;
@@ -2545,18 +2597,16 @@ function playSimulation() {
     // The month-to-month color changes are the animation; pacing carries the drama.
     recomputeAndRender(false);
 
-    const delay = getPlaybackDelay(month);
-    month++;
-
-    if (month > 60) {
+    if (month >= 60) {
       STATE.playbackTimer = setTimeout(stopPlayback, 700);
       return;
     }
 
-    STATE.playbackTimer = setTimeout(advance, delay);
+    STATE.playbackTimer = setTimeout(advance, getPlaybackDelay(month));
   };
 
-  advance();
+  // Wait briefly before the first transition so pressing Play does not cause an instant state jump.
+  STATE.playbackTimer = setTimeout(advance, 180);
 }
 
 function handleControlInput(key, value, immediate = false) {
