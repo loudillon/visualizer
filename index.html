@@ -1094,6 +1094,23 @@ function registerNode(node) {
   }
 }
 
+function resetRuntimeState() {
+  STATE.exodusTriggeredMonths = {};
+  STATE.oversightCollapseMonth = null;
+  STATE.effectiveCounterweights = STATE.controls.counterweights;
+
+  for (const node of NODES) {
+    node.currentType = 'N';
+    node.previousType = 'N';
+    node.turnovered = false;
+    node.fired = false;
+    node.turnoverEvents = [];
+    node.firingEvents = [];
+    node.replacementCount = 0;
+    node.occupantSeed = node.seed;
+  }
+}
+
 function getChildren(parentId) {
   return CHILDREN_MAP.get(parentId) || [];
 }
@@ -2165,20 +2182,7 @@ function computeOneMonthStep(months) {
 
 function computeAllNodeTypes() {
   const target = STATE.timeMonths;
-  STATE.exodusTriggeredMonths = {};
-  STATE.oversightCollapseMonth = null;
-
-  // reset visible state
-  for (const node of NODES) {
-    node.currentType = 'N';
-    node.previousType = 'N';
-    node.turnovered = false;
-    node.fired = false;
-    node.turnoverEvents = [];
-    node.firingEvents = [];
-    node.replacementCount = 0;
-    node.occupantSeed = node.seed;
-  }
+  resetRuntimeState();
 
   // Sequential/cumulative simulation, month by month.
   for (const months of SIM_MONTHS) {
@@ -2452,6 +2456,9 @@ function playSimulation() {
   btn.classList.add('playing');
 
   let month = 0;
+  STATE.timeMonths = 0;
+  resetRuntimeState();
+  hardResetVisualState();
 
   const advance = () => {
     if (month > 60) {
@@ -2693,8 +2700,11 @@ function hardResetVisualState() {
 function newRun() {
   stopPlayback();
   STATE.runSeed += 1;
+  STATE.timeMonths = 0;
 
-  // Keep the current scenario, sliders, and year; only reroll probabilistic outcomes.
+  // New run means fresh initial conditions. Do not keep a 5-year cascade and
+  // reroll from there; that made repeated clicks look like red state was compounding.
+  resetRuntimeState();
   hardResetVisualState();
   recomputeAndRender(false);
 }
