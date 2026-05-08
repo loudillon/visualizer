@@ -56,24 +56,24 @@
 
   header {
     border-bottom: 1px solid var(--rule);
-    padding-bottom: 4px;
+    padding-bottom: 2px;
   }
 
   .eyebrow {
     font-family: Consolas, "Courier New", monospace;
-    font-size: 10px;
-    letter-spacing: 0.17em;
+    font-size: 9px;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
     color: var(--gold);
-    margin-bottom: 4px;
+    margin-bottom: 2px;
   }
 
   h1 {
-    margin: 0 0 4px;
+    margin: 0 0 2px;
     font-weight: 300;
-    font-size: clamp(30px, 3.1vw, 48px);
-    line-height: 0.95;
-    letter-spacing: -0.035em;
+    font-size: clamp(24px, 2.35vw, 36px);
+    line-height: 0.98;
+    letter-spacing: -0.03em;
   }
 
   h1 em {
@@ -83,9 +83,9 @@
 
   .deck {
     margin: 0;
-    max-width: 1040px;
-    font-size: 14px;
-    line-height: 1.25;
+    max-width: 1120px;
+    font-size: 12.2px;
+    line-height: 1.15;
     color: var(--ink-2);
     font-style: italic;
   }
@@ -341,17 +341,17 @@
 
   .legend {
     display: grid;
-    gap: 6px;
+    gap: 4px;
     font-family: Consolas, "Courier New", monospace;
     color: var(--ink-2);
-    font-size: 9px;
-    line-height: 1.25;
+    font-size: 8.3px;
+    line-height: 1.16;
   }
 
   .legend-item {
     display: grid;
     grid-template-columns: 12px 1fr;
-    gap: 7px;
+    gap: 6px;
     align-items: center;
   }
 
@@ -360,12 +360,42 @@
     height: 10px;
     border-radius: 50%;
     display: inline-block;
+    box-sizing: border-box;
   }
 
   .dot-T { background: var(--trait); }
   .dot-I { background: var(--influence); }
   .dot-O { background: var(--turnover); }
-  .dot-N { border: 1px solid var(--ink-3); }
+  .dot-N { border: 1px solid var(--ink-3); background: transparent; }
+  .dot-R {
+    border: 2px dashed var(--clean);
+    background: transparent;
+  }
+  .dot-F {
+    background: var(--trait);
+    box-shadow: 0 0 0 2px rgba(199, 62, 46, 0.22);
+  }
+  .dot-S {
+    width: 12px;
+    height: 10px;
+    border-radius: 3px;
+    border: 1.2px solid var(--clean);
+    background: rgba(138, 168, 118, 0.12);
+  }
+  .dot-X {
+    width: 12px;
+    height: 10px;
+    border-radius: 3px;
+    border: 1.2px solid var(--turnover);
+    background: rgba(210, 139, 69, 0.14);
+  }
+
+  .legend-note {
+    margin-top: 1px;
+    color: var(--ink-3);
+    font-size: 7.8px;
+    line-height: 1.12;
+  }
 
   .branch-panel {
     min-height: 0;
@@ -776,9 +806,9 @@
 <div class="app">
   <header>
     <div class="eyebrow">Organizational pathology · Dark Triad cascade</div>
-    <h1>How the few<br>shape the <em>many</em>.</h1>
+    <h1>How the few shape the <em>many</em>.</h1>
     <p class="deck">
-      A one-page tree simulator showing how Dark Triad traits — narcissism, Machiavellianism, and psychopathy — can concentrate in leadership, then shape culture through doctrine, incentives, hiring selection, turnover, and persistent pockets of resistance.
+      A one-page simulator of how Dark Triad leadership can spread through culture, selection, turnover, and resistance.
     </p>
   </header>
 
@@ -837,10 +867,15 @@
       <section class="panel">
         <div class="panel-title">Legend</div>
         <div class="legend">
-          <div class="legend-item"><span class="dot dot-T"></span><span>Dark Triad trait carrier</span></div>
-          <div class="legend-item"><span class="dot dot-I"></span><span>Behaviorally captured</span></div>
-          <div class="legend-item"><span class="dot dot-O"></span><span>Yellow flash = turnover, then replacement resolves</span></div>
-          <div class="legend-item"><span class="dot dot-N"></span><span>Clean / resistant occupant</span></div>
+          <div class="legend-item"><span class="dot dot-T"></span><span><strong>Red</strong> = Dark Triad trait carrier</span></div>
+          <div class="legend-item"><span class="dot dot-I"></span><span><strong>Purple</strong> = behaviorally captured</span></div>
+          <div class="legend-item"><span class="dot dot-N"></span><span><strong>Plain outline</strong> = clean occupant</span></div>
+          <div class="legend-item"><span class="dot dot-R"></span><span><strong>Green dashed outline</strong> = resistant clean individual</span></div>
+          <div class="legend-item"><span class="dot dot-S"></span><span><strong>Green shell</strong> = shielding manager/team</span></div>
+          <div class="legend-item"><span class="dot dot-O"></span><span><strong>Yellow flash</strong> = turnover</span></div>
+          <div class="legend-item"><span class="dot dot-F"></span><span><strong>Red flash</strong> = firing</span></div>
+          <div class="legend-item"><span class="dot dot-X"></span><span><strong>Exodus badge</strong> = branch under exodus pressure</span></div>
+          <div class="legend-note">Resistant is a tougher subset of clean, not a separate color-state.</div>
         </div>
       </section>
     </aside>
@@ -872,13 +907,9 @@
             <rect class="input-box" x="135" y="16" width="185" height="34" rx="3"/>
             <text class="input-text" x="227.5" y="38" text-anchor="middle">Dark Triad</text>
           </g>
-          <g id="inp-doctrine">
-            <rect class="input-box" x="618" y="16" width="170" height="34" rx="3"/>
-            <text class="input-text" x="703" y="38" text-anchor="middle">Operating Pressure</text>
-          </g>
-          <g id="inp-incentives">
-            <rect class="input-box" x="1012" y="16" width="180" height="34" rx="3"/>
-            <text class="input-text" x="1102" y="38" text-anchor="middle">Selection</text>
+          <g id="inp-pressureSelection">
+            <rect class="input-box" x="672" y="16" width="360" height="34" rx="3"/>
+            <text class="input-text" x="852" y="38" text-anchor="middle">Operating Pressure + Selection</text>
           </g>
           <g id="inp-accountability">
             <rect class="input-box" x="1468" y="16" width="198" height="34" rx="3"/>
@@ -886,8 +917,7 @@
           </g>
 
           <path class="arr" d="M 227 50 Q 227 72, 895 82" marker-end="url(#arrow)"/>
-          <path class="arr" d="M 703 50 Q 703 72, 898 82" marker-end="url(#arrow)"/>
-          <path class="arr" d="M 1102 50 Q 1102 72, 902 82" marker-end="url(#arrow)"/>
+          <path class="arr" d="M 852 50 Q 852 72, 899 82" marker-end="url(#arrow)"/>
           <path class="arr" d="M 1567 50 Q 1567 72, 906 82" marker-end="url(#arrow)"/>
 
           <text class="lbl" x="22" y="103">CEO</text>
@@ -1950,9 +1980,7 @@ function computeInfluenceType(node, parent) {
 
 function computeTurnoverType(node, parent, months) {
   if (!parent) return false;
-
-  const years = months / 12;
-  if (years < 1) return false;
+  if (months < 6) return false;
 
   const parentType = parent.currentType;
   const grandparent = parent && parent.parentId ? NODE_MAP.get(parent.parentId) : null;
@@ -1972,40 +2000,31 @@ function computeTurnoverType(node, parent, months) {
   const moralProtection = resistanceProtection(node, parent);
   const shielding = node.level === 5 && parent && parent.level === 4 ? getShieldingManager(parent) : false;
   const shieldingManagerRisk = node.level === 4 && isShieldingManagerAtRisk(node);
-
-  let bossPressure =
-    parentType === 'T' ? 0.18 :
-    parentType === 'I' ? 0.11 :
-    0;
-
-  if (indirectHostility) {
-    bossPressure += grandparent.currentType === 'T' ? 0.055 : 0.035;
-  }
-
-  let chance =
-    bossPressure +
-    operatingPressure * 0.165 -
-    counterweights * 0.14 -
-    individualResistance * 0.07 -
-    moralProtection * 0.55 +
-    Math.min(0.12, years * 0.022);
-
-  if (node.level === 3 || node.level === 4) chance += 0.035;
-  if (node.level === 5) chance += 0.025;
-  if (shielding) chance -= 0.18;
-  if (shieldingManagerRisk) chance += 0.09;
-
   const branchMetrics = node.lane !== null ? getBranchMetrics(node.lane) : null;
-  if (branchMetrics && node.currentType === 'N') {
-    chance += branchMetrics.exodusPressure * 0.23;
-  }
+  const tenureRamp = Math.min(1, Math.max(0, months - 6) / 24);
 
-  chance = Math.max(0, Math.min(0.58, chance));
+  // Calibrated around real-world monthly quits being around low single digits,
+  // with toxic branches creating elevated but not absurd monthly risk.
+  let chance = hostileBoss ? 0.012 : 0.009;
+  chance += parentType === 'T' ? 0.007 : parentType === 'I' ? 0.004 : 0;
+  chance += operatingPressure * 0.008;
+  chance += tenureRamp * 0.004;
+  chance -= counterweights * 0.006;
+  chance -= individualResistance * 0.003;
+  chance -= moralProtection * 0.012;
+
+  if (node.level === 3 || node.level === 4) chance += 0.002;
+  if (node.level === 5) chance += 0.001;
+  if (shielding) chance -= 0.007;
+  if (shieldingManagerRisk) chance += 0.004;
+  if (branchMetrics && node.currentType === 'N') chance += branchMetrics.exodusPressure * 0.030;
+
+  chance = Math.max(0.002, Math.min(0.070, chance));
   return runRandom(node.seed, 61 + months) < chance;
 }
 
 function computeFiringType(node, parent, months) {
-  if (!parent || months < 12) return false;
+  if (!parent || months < 6) return false;
   if (node.currentType !== 'N') return false;
 
   const parentType = parent.currentType;
@@ -2026,19 +2045,22 @@ function computeFiringType(node, parent, months) {
   const moralProtection = resistanceProtection(node, parent);
   const shieldingManagerRisk = node.level === 4 && isShieldingManagerAtRisk(node);
   const shielding = node.level === 5 && parent && parent.level === 4 ? getShieldingManager(parent) : false;
+  const tenureRamp = Math.min(1, Math.max(0, months - 6) / 30);
 
-  let chance =
-    (parentType === 'T' ? 0.06 : parentType === 'I' ? 0.035 : 0.015) +
-    operatingPressure * 0.08 -
-    counterweights * 0.11 -
-    moralProtection * 0.12;
+  // Direct firings are less common than quits, even in hostile environments.
+  let chance = hostileBoss ? 0.0015 : 0.0010;
+  chance += parentType === 'T' ? 0.0045 : parentType === 'I' ? 0.0025 : 0;
+  chance += operatingPressure * 0.004;
+  chance += tenureRamp * 0.0015;
+  chance -= counterweights * 0.004;
+  chance -= moralProtection * 0.006;
 
-  if (indirectHostility) chance += 0.025;
-  if (shieldingManagerRisk) chance += 0.15;
-  if (shielding) chance -= 0.04;
-  if (branchMetrics) chance += branchMetrics.exodusPressure * 0.08;
+  if (indirectHostility) chance += 0.0015;
+  if (shieldingManagerRisk) chance += 0.008;
+  if (shielding) chance -= 0.001;
+  if (branchMetrics) chance += branchMetrics.exodusPressure * 0.012;
 
-  chance = Math.max(0, Math.min(0.28, chance));
+  chance = Math.max(0, Math.min(0.032, chance));
   return runRandom(node.seed, 171 + months) < chance;
 }
 
@@ -2048,40 +2070,40 @@ function resolveTurnoverReplacement(node, parent, months) {
   const counterweights = getEffectiveCounterweightsRatio();
   const timeline = months / 60;
 
-  // Red replacement: possible, especially under red leaders, but still rare.
+  // Red replacement: possible under selection pressure, but still rare.
   let redHireChance = 0;
   if (STATE.controls.darkTriad > 0) {
     redHireChance =
-      darkTriadRateForLevel(node.level) * roleTraitMultiplier(node.level) * 0.55 +
-      (parentType === 'T' ? 0.018 : 0) +
-      (parentType === 'I' ? 0.004 : 0) +
-      (node.level <= 4 ? operatingPressure * 0.020 * timeline : 0);
+      darkTriadRateForLevel(node.level) * roleTraitMultiplier(node.level) * 0.35 +
+      (parentType === 'T' ? 0.012 : 0) +
+      (parentType === 'I' ? 0.003 : 0) +
+      (node.level <= 4 ? operatingPressure * 0.012 * timeline : 0);
   }
 
-  // Aligned/captured replacement: common in hostile branches, but not guaranteed.
+  // Aligned/captured replacement: more common in hostile branches, but not guaranteed.
   let alignedChance =
-    (parentType === 'T' ? 0.40 : parentType === 'I' ? 0.28 : 0.10) +
-    operatingPressure * 0.26 -
-    counterweights * 0.16 +
-    timeline * 0.045;
+    (parentType === 'T' ? 0.32 : parentType === 'I' ? 0.22 : 0.08) +
+    operatingPressure * 0.18 -
+    counterweights * 0.10 +
+    timeline * 0.03;
 
-  // Resistant replacement / remaining pocket.
+  // Resistant/clean replacement remains common in healthier systems.
   let resistantChance =
-    0.32 +
-    counterweights * 0.38 -
-    operatingPressure * 0.13;
+    0.38 +
+    counterweights * 0.30 -
+    operatingPressure * 0.10;
 
   if (isMoralResistor(node)) {
-    resistantChance += 0.32;
-    alignedChance *= 0.70;
-    redHireChance *= 0.50;
+    resistantChance += 0.24;
+    alignedChance *= 0.76;
+    redHireChance *= 0.55;
   }
 
   if (parentType === 'N') redHireChance *= 0.45;
 
-  redHireChance = Math.max(0, Math.min(node.level <= 2 ? 0.18 : node.level <= 4 ? 0.10 : 0.015, redHireChance));
-  alignedChance = Math.max(0, Math.min(0.62, alignedChance));
-  resistantChance = Math.max(0.18, Math.min(0.80, resistantChance));
+  redHireChance = Math.max(0, Math.min(node.level <= 2 ? 0.11 : node.level <= 4 ? 0.06 : 0.01, redHireChance));
+  alignedChance = Math.max(0, Math.min(0.50, alignedChance));
+  resistantChance = Math.max(0.22, Math.min(0.82, resistantChance));
 
   const total = redHireChance + alignedChance + resistantChance;
   const roll = runRandom(node.occupantSeed, 91 + months);
@@ -2401,7 +2423,7 @@ function updateUiText() {
   } else if (STATE.timeMonths <= 36) {
     note.textContent = 'Year 2–3: hiring, promotion, and turnover begin changing who remains. Toxic branches now build exodus pressure gradually; once it gets high enough, clean people start leaving in waves instead of tripping a cartoon cliff.';
   } else {
-    note.textContent = 'Years 3–5: turnover compounds, exodus events can hollow out toxic branches, clean managers can still shield pockets of ICs, and captured oversight keeps formal accountability from doing much of anything, while exodus badges flag branches that are actively emptying out and red flashes mark direct firings.';
+    note.textContent = 'Years 3–5: turnover compounds, exodus pressure can hollow out toxic branches, clean managers can still shield pockets of ICs, and captured oversight degrades accountability while red flashes mark direct firings.';
   }
 
   updateInputHeat();
@@ -2709,8 +2731,7 @@ function updateInputHeat() {
   const c = STATE.controls;
   const hot = {
     'inp-darkTriad': c.darkTriad > 12,
-    'inp-doctrine': c.operatingPressure > 65,
-    'inp-incentives': c.operatingPressure > 65,
+    'inp-pressureSelection': c.operatingPressure > 65,
     'inp-accountability': c.counterweights < 35 || getEffectiveCounterweights() <= 0
   };
 
@@ -2785,8 +2806,8 @@ function bindInputTooltips() {
       '<strong>Estimated Dark Triad concentration in leadership.</strong> This controls the assumed rate of narcissism, Machiavellianism, and psychopathy in senior leadership. 4% is the reference point; 20% represents a suspected high-risk environment. Setting it to 0% is a sandbox test, not a realistic population claim. The broad workforce baseline remains about 1% unless this is set to 0%.'
     ],
     operatingPressure: [
-      'Operating Pressure',
-      '<strong>Doctrine plus incentives.</strong> This combines the company’s excuse system with what it actually rewards. Low means stakeholder norms, balanced rewards, and real concern for harm. High means ends-justify-means doctrine, financial extraction pressure, promotions for hard-charging behavior, and weak concern for turnover, retaliation, or quality damage.'
+      'Operating Pressure + Selection',
+      '<strong>Doctrine, incentives, hiring, and promotion pressure.</strong> This combines the company’s excuse system with what it actually rewards. Low means stakeholder norms, balanced rewards, and real concern for harm. High means ends-justify-means doctrine, financial extraction pressure, promotions for hard-charging behavior, selection for loyal/aligned replacements, and weak concern for turnover, retaliation, or quality damage.'
     ],
     counterweights: [
       'Accountability / Counterweights',
@@ -2796,8 +2817,7 @@ function bindInputTooltips() {
 
   const svgMap = {
     'inp-darkTriad': 'darkTriad',
-    'inp-doctrine': 'operatingPressure',
-    'inp-incentives': 'operatingPressure',
+    'inp-pressureSelection': 'operatingPressure',
     'inp-accountability': 'counterweights'
   };
 
