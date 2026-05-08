@@ -620,7 +620,7 @@
   }
 
   .turnover-flash {
-    animation: turnoverFlash 780ms ease-out;
+    animation: turnoverFlash 620ms ease-out;
   }
 
   @keyframes fireFlash {
@@ -642,7 +642,7 @@
   }
 
   .fire-flash {
-    animation: fireFlash 860ms ease-out;
+    animation: fireFlash 680ms ease-out;
   }
 
 
@@ -1031,9 +1031,11 @@ const STATE = {
   renderTimers: [],
   computeDebounce: null,
   runSeed: 1,
+  initialSeed: 1,
   effectiveCounterweights: SCENARIOS.founderRot.controls.counterweights,
   exodusTriggeredMonths: {},
-  oversightCollapseMonth: null
+  oversightCollapseMonth: null,
+  initialized: false
 };
 
 const NODES = [];
@@ -1060,6 +1062,12 @@ function seededRandom(seed, salt = 0) {
 
 function runRandom(seed, salt = 0) {
   return seededRandom(seed + STATE.runSeed * 1000003, salt);
+}
+
+function initialRandom(seed, salt = 0) {
+  // Month-zero initial conditions are rerolled only when initialSeed changes.
+  // This avoids compounding stale state while still making New Run visibly new.
+  return seededRandom(seed + STATE.initialSeed * 1000033, salt);
 }
 
 function clamp(n, lo = 0, hi = 100) {
@@ -1109,6 +1117,23 @@ function resetRuntimeState() {
     node.replacementCount = 0;
     node.occupantSeed = node.seed;
   }
+}
+
+function cancelPendingRenders() {
+  stopPlayback();
+  clearTimeout(STATE.computeDebounce);
+  for (const timer of STATE.renderTimers) clearTimeout(timer);
+  STATE.renderTimers = [];
+  STATE.renderToken++;
+}
+
+function startFreshRun({ rerollInitial = false, resetTime = true } = {}) {
+  cancelPendingRenders();
+  if (resetTime) STATE.timeMonths = 0;
+  if (rerollInitial) STATE.initialSeed += 1;
+  STATE.runSeed += 1;
+  resetRuntimeState();
+  hardResetVisualState();
 }
 
 function getChildren(parentId) {
@@ -1268,7 +1293,7 @@ function computeBoardType(months) {
       rawCounterweights * 0.10
     ));
 
-    if (runRandom(node.occupantSeed, 610) < redChance) {
+    if (initialRandom(node.occupantSeed, 610) < redChance) {
       node.currentType = 'T';
       return;
     }
@@ -1280,7 +1305,7 @@ function computeBoardType(months) {
       rawCounterweights * 0.12
     ));
 
-    node.currentType = runRandom(node.occupantSeed, 611) < capturedChance ? 'I' : 'N';
+    node.currentType = initialRandom(node.occupantSeed, 611) < capturedChance ? 'I' : 'N';
     return;
   }
 
@@ -1347,7 +1372,7 @@ function computeOversightType(months) {
           rawCounterweights * 0.12
         ));
 
-    if (runRandom(node.occupantSeed, 480) < redChance) {
+    if (initialRandom(node.occupantSeed, 480) < redChance) {
       node.currentType = 'T';
       getEffectiveCounterweights();
       return;
@@ -1361,7 +1386,7 @@ function computeOversightType(months) {
       rawCounterweights * 0.45
     ));
 
-    node.currentType = runRandom(node.occupantSeed, 481) < capturedChance ? 'I' : 'N';
+    node.currentType = initialRandom(node.occupantSeed, 481) < capturedChance ? 'I' : 'N';
     getEffectiveCounterweights();
     return;
   }
@@ -1384,6 +1409,11 @@ function computeOversightType(months) {
 }
 
 function buildTree() {
+  NODES.length = 0;
+  NODE_MAP.clear();
+  CHILDREN_MAP.clear();
+  Object.values(LEVELS).forEach(level => level.length = 0);
+
   const CONFIG = {
     vps: 5,
     directorsPerVp: 3,
@@ -1514,6 +1544,11 @@ function buildScenarioCards() {
 }
 
 function buildStaticSvg() {
+  ['lanes', 'edges', 'clusters', 'nodes'].forEach(id => {
+    const group = document.getElementById(id);
+    if (group) group.innerHTML = '';
+  });
+
   const lanes = document.getElementById('lanes');
   const laneWidth = (SVG_WIDTH - 2 * PADDING) / 5;
 
@@ -1656,6 +1691,8 @@ function buildStaticSvg() {
     el.setAttribute('data-level', node.level);
     el.setAttribute('fill', 'none');
     el.setAttribute('stroke', '#7A7264');
+    el.style.fill = 'none';
+    el.style.stroke = '#7A7264';
 
     const title = document.createElementNS(SVG_NS, 'title');
     title.textContent = `${ROLE_NAMES[node.level]}`;
@@ -1794,7 +1831,7 @@ function computeTraitType(node, parent) {
   const cap = node.level <= 2 ? 0.18 : node.level === 3 ? 0.12 : node.level === 4 ? 0.075 : 0.015;
   chance = Math.max(0, Math.min(cap, chance));
 
-  return runRandom(node.occupantSeed, 11) < chance;
+  return initialRandom(node.occupantSeed, 11) < chance;
 }
 
 
@@ -2124,7 +2161,7 @@ function computeOneMonthStep(months) {
           node.currentType = 'T';
         } else if (months === 0) {
           const ceoChance = Math.min(0.28, darkTriadRateForLevel(1) * 1.25);
-          node.currentType = runRandom(node.occupantSeed, 99) < ceoChance ? 'T' : 'N';
+          node.currentType = initialRandom(node.occupantSeed, 99) < ceoChance ? 'T' : 'N';
         } else {
           node.currentType = prior;
         }
@@ -2181,10 +2218,10 @@ function computeOneMonthStep(months) {
 }
 
 function computeAllNodeTypes() {
-  const target = STATE.timeMonths;
+  const target = Number(STATE.timeMonths) || 0;
   resetRuntimeState();
 
-  // Sequential/cumulative simulation, month by month.
+  // Sequential/cumulative simulation, month by month, always from a clean month-zero baseline.
   for (const months of SIM_MONTHS) {
     if (months > target) break;
     STATE.timeMonths = months;
@@ -2206,14 +2243,13 @@ function computeAllNodeTypes() {
 
 function renderNode(node) {
   const type = node.currentType;
-  const el = document.querySelector(`[data-id="${node.id}"]`);
-  if (!el) return;
+  const elements = Array.from(document.querySelectorAll(`[data-id="${node.id}"]`));
+  if (!elements.length) return;
 
   const baseClass = node.special
     ? 'node leader special-node'
     : node.level === 5 ? 'node ic-dot' : 'node leader';
   const resistorClass = !node.special && type === 'N' && isMoralResistor(node) ? ' moral-resistor' : '';
-  el.setAttribute('class', `${baseClass} node-${type}${resistorClass}`);
 
   const fills = {
     T: '#C73E2E',
@@ -2227,39 +2263,47 @@ function renderNode(node) {
     N: '#7A7264'
   };
 
-  el.setAttribute('fill', fills[type]);
-  el.setAttribute('stroke', strokes[type]);
+  for (const el of elements) {
+    // Full replace on every matching SVG element. querySelector() only repainted
+    // the first match; duplicate ghosts can survive hot reload / interrupted init.
+    el.classList.remove('node-T', 'node-I', 'node-N', 'moral-resistor', 'turnover-flash', 'fire-flash', 'focus-node');
+    el.setAttribute('class', `${baseClass} node-${type}${resistorClass}`);
+    el.setAttribute('fill', fills[type]);
+    el.setAttribute('stroke', strokes[type]);
+    el.style.removeProperty('fill');
+    el.style.removeProperty('stroke');
 
-  if (node.firingEvents && node.firingEvents.some(evt => evt.months === STATE.timeMonths)) {
-    el.classList.remove('fire-flash');
-    void el.getBoundingClientRect();
-    el.classList.add('fire-flash');
-    el.classList.remove('turnover-flash');
-  } else if (node.turnoverEvents && node.turnoverEvents.some(evt => evt.months === STATE.timeMonths)) {
-    el.classList.remove('turnover-flash');
-    void el.getBoundingClientRect();
-    el.classList.add('turnover-flash');
-    el.classList.remove('fire-flash');
-  } else {
-    el.classList.remove('turnover-flash');
-    el.classList.remove('fire-flash');
-  }
+    const firedThisMonth = node.firingEvents && node.firingEvents.some(evt => evt.months === STATE.timeMonths);
+    const turnoverThisMonth = node.turnoverEvents && node.turnoverEvents.some(evt => evt.months === STATE.timeMonths);
 
-  const title = el.querySelector('title');
-  if (title) {
-    const parent = node.parentId ? NODE_MAP.get(node.parentId) : null;
-    title.textContent =
-      `${getRoleName(node)} · ${TYPE_NAMES[type]}` +
-      `${STATE.manualOverrides[node.id] ? ' (manually set)' : ''}` +
-      `${parent ? `
-Parent: ${TYPE_NAMES[parent.currentType]}` : ''}` +
-      `${node.turnoverEvents && node.turnoverEvents.length ? `
-Turnover events: ${node.turnoverEvents.length}` : ''}` +
-      `${node.firingEvents && node.firingEvents.length ? `
-Firing events: ${node.firingEvents.length}` : ''}` +
-      `${!node.special && isMoralResistor(node) ? `\nCurrent occupant: high moral/empathy resistance` : ''}` +
-      `${node.id === OVERSIGHT_NODE_ID ? `\nEffective counterweights: ${getEffectiveCounterweights()} / 100` : ''}` +
-      `${node.id === BOARD_NODE_ID ? `\nThis node can police or fail to police oversight.` : ''}`;
+    // Reconciliation does a hard repaint, so flash classes are applied after
+    // base classes and attributes. requestAnimationFrame gives the browser a
+    // clean frame boundary, which makes SVG animations reliably restart.
+    el.classList.remove('turnover-flash', 'fire-flash');
+    if (firedThisMonth || turnoverThisMonth) {
+      void el.getBoundingClientRect();
+      requestAnimationFrame(() => {
+        if (firedThisMonth) {
+          el.classList.add('fire-flash');
+        } else if (turnoverThisMonth) {
+          el.classList.add('turnover-flash');
+        }
+      });
+    }
+
+    const title = el.querySelector('title');
+    if (title) {
+      const parent = node.parentId ? NODE_MAP.get(node.parentId) : null;
+      title.textContent =
+        `${getRoleName(node)} · ${TYPE_NAMES[type]}` +
+        `${STATE.manualOverrides[node.id] ? ' (manually set)' : ''}` +
+        `${parent ? `\nParent: ${TYPE_NAMES[parent.currentType]}` : ''}` +
+        `${node.turnoverEvents && node.turnoverEvents.length ? `\nTurnover events: ${node.turnoverEvents.length}` : ''}` +
+        `${node.firingEvents && node.firingEvents.length ? `\nFiring events: ${node.firingEvents.length}` : ''}` +
+        `${!node.special && isMoralResistor(node) ? `\nCurrent occupant: high moral/empathy resistance` : ''}` +
+        `${node.id === OVERSIGHT_NODE_ID ? `\nEffective counterweights: ${getEffectiveCounterweights()} / 100` : ''}` +
+        `${node.id === BOARD_NODE_ID ? `\nThis node can police or fail to police oversight.` : ''}`;
+    }
   }
 
   const pin = document.querySelector(`[data-pin-for="${node.id}"]`);
@@ -2274,6 +2318,15 @@ Firing events: ${node.firingEvents.length}` : ''}` +
   if (node.level === 4) renderManagerCluster(node);
 }
 
+function reconcileSvgToModel() {
+  const modelIds = new Set(NODES.map(node => node.id));
+  document.querySelectorAll('[data-id]').forEach(el => {
+    if (!modelIds.has(el.getAttribute('data-id'))) el.remove();
+  });
+
+  for (const node of NODES) renderNode(node);
+}
+
 function renderAllNodes(animated = false) {
   STATE.renderToken++;
   const token = STATE.renderToken;
@@ -2282,7 +2335,7 @@ function renderAllNodes(animated = false) {
   STATE.renderTimers = [];
 
   if (!animated) {
-    for (const node of NODES) renderNode(node);
+    reconcileSvgToModel();
     updateBranchExodusVisuals();
     updateUiText();
     return;
@@ -2299,7 +2352,7 @@ function renderAllNodes(animated = false) {
         updateBranchExodusVisuals();
         updateUiText();
       }
-    }, (level - 1) * 470);
+    }, (level - 1) * 300);
     STATE.renderTimers.push(timer);
   }
 }
@@ -2367,12 +2420,7 @@ function resetSimulationToScenario(scenarioId) {
   const scenario = SCENARIOS[scenarioId];
   if (!scenario) return;
 
-  stopPlayback();
-  clearTimeout(STATE.computeDebounce);
-
-  for (const timer of STATE.renderTimers) clearTimeout(timer);
-  STATE.renderTimers = [];
-  STATE.renderToken++;
+  cancelPendingRenders();
 
   STATE.scenarioId = scenarioId;
   STATE.controls = { ...scenario.controls };
@@ -2381,7 +2429,10 @@ function resetSimulationToScenario(scenarioId) {
   STATE.manualOverrides = {};
   STATE.customMode = Boolean(scenario.custom);
   STATE.runSeed = 1;
+  STATE.initialSeed = 1;
 
+  resetRuntimeState();
+  hardResetVisualState();
   syncControlsToState();
   buildScenarioCards();
   recomputeAndRender(false);
@@ -2426,7 +2477,7 @@ function getExodusBranchCount() {
 }
 
 function getPlaybackDelay(months) {
-  if (months <= 0) return 850;
+  if (months <= 0) return 450;
 
   const yearBoundary = months % 12 === 0;
   const turnoverEvents = getTurnoverEventsThisMonth(months);
@@ -2434,15 +2485,15 @@ function getPlaybackDelay(months) {
   const exodusBranches = getExodusBranchCount();
   const oversightCollapsed = getEffectiveCounterweights() <= 0;
 
-  let delay = 285; // normal month-to-month pace; was 125ms, which was basically espresso poured into a chart.
+  let delay = 170;
 
-  if (yearBoundary) delay += 1050;
-  if (turnoverEvents > 0) delay += Math.min(900, 130 + turnoverEvents * 85);
-  if (firingEvents > 0) delay += Math.min(900, 180 + firingEvents * 120);
-  if (exodusBranches > 0) delay += 650;
-  if (oversightCollapsed && months <= 18) delay += 300;
+  if (yearBoundary) delay += 620;
+  if (turnoverEvents > 0) delay += Math.min(520, 90 + turnoverEvents * 55);
+  if (firingEvents > 0) delay += Math.min(620, 120 + firingEvents * 80);
+  if (exodusBranches > 0) delay += 360;
+  if (oversightCollapsed && months <= 18) delay += 160;
 
-  return Math.min(2200, delay);
+  return Math.min(1350, delay);
 }
 
 function playSimulation() {
@@ -2456,9 +2507,9 @@ function playSimulation() {
   btn.classList.add('playing');
 
   let month = 0;
-  STATE.timeMonths = 0;
-  resetRuntimeState();
-  hardResetVisualState();
+  startFreshRun({ rerollInitial: false, resetTime: true });
+  btn.textContent = 'Stop cinematic simulation';
+  btn.classList.add('playing');
 
   const advance = () => {
     if (month > 60) {
@@ -2476,7 +2527,7 @@ function playSimulation() {
     month++;
 
     if (month > 60) {
-      STATE.playbackTimer = setTimeout(stopPlayback, 1350);
+      STATE.playbackTimer = setTimeout(stopPlayback, 700);
       return;
     }
 
@@ -2645,7 +2696,7 @@ function focusSubtree(rootId) {
 
 function clearFocus() {
   const svg = document.querySelector('svg.cascade');
-  svg.classList.remove('focus-mode');
+  if (svg) svg.classList.remove('focus-mode');
 
   document.querySelectorAll('.focus-node, .focus-edge, .focus-cluster, .focus-label, .focus-lane').forEach(el => {
     el.classList.remove('focus-node', 'focus-edge', 'focus-cluster', 'focus-label', 'focus-lane');
@@ -2674,6 +2725,7 @@ function hardResetVisualState() {
   clearFocus();
   document.querySelectorAll('.turnover-flash').forEach(el => el.classList.remove('turnover-flash'));
   document.querySelectorAll('.fire-flash').forEach(el => el.classList.remove('fire-flash'));
+  document.querySelectorAll('.node-T, .node-I, .node-N').forEach(el => el.classList.remove('node-T', 'node-I', 'node-N', 'moral-resistor', 'focus-node'));
   document.querySelectorAll('[data-id]').forEach(el => {
     const level = Number(el.getAttribute('data-level'));
     const isSpecial = el.classList.contains('special-node');
@@ -2681,6 +2733,8 @@ function hardResetVisualState() {
     el.setAttribute('class', `${baseClass} node-N`);
     el.setAttribute('fill', 'none');
     el.setAttribute('stroke', '#7A7264');
+    el.style.fill = 'none';
+    el.style.stroke = '#7A7264';
   });
   document.querySelectorAll('[data-cluster-for]').forEach(el => el.classList.remove('shielded-cluster', 'focus-cluster'));
   document.querySelectorAll('[data-cluster-label-for]').forEach(el => {
@@ -2698,14 +2752,10 @@ function hardResetVisualState() {
 }
 
 function newRun() {
-  stopPlayback();
-  STATE.runSeed += 1;
-  STATE.timeMonths = 0;
-
-  // New run means fresh initial conditions. Do not keep a 5-year cascade and
-  // reroll from there; that made repeated clicks look like red state was compounding.
-  resetRuntimeState();
-  hardResetVisualState();
+  // New Run means a fresh baseline and a fresh future timeline.
+  // This clears generated state first, then changes the seeds once.
+  // No old replacement/firing/turnover state is reused.
+  startFreshRun({ rerollInitial: true, resetTime: true });
   recomputeAndRender(false);
 }
 
@@ -2793,6 +2843,8 @@ function bindInputTooltips() {
 }
 
 function init() {
+  if (STATE.initialized) return;
+  STATE.initialized = true;
   buildTree();
   buildScenarioCards();
   buildStaticSvg();
