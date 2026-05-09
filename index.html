@@ -1281,7 +1281,7 @@ function isExodusFlashNode(node, months = STATE.timeMonths) {
   return Boolean(ids && ids.includes(node.id));
 }
 
-function canManagerStartShielding(manager) {
+function canManagerStartShielding(manager, months = STATE.timeMonths) {
   if (!manager || manager.level !== 4 || manager.currentType !== 'N') return false;
   if (!isMoralResistor(manager)) return false;
   const director = manager.parentId ? NODE_MAP.get(manager.parentId) : null;
@@ -1289,13 +1289,15 @@ function canManagerStartShielding(manager) {
 
   const effectiveCounterweights = getEffectiveCounterweightsRatio();
   const operatingPressure = STATE.controls.operatingPressure / 100;
+  const exposureRamp = Math.min(1, Math.max(0, months - 3) / 12);
   let chance =
-    0.48 +
-    effectiveCounterweights * 0.34 -
-    operatingPressure * 0.06;
+    0.26 +
+    exposureRamp * 0.36 +
+    effectiveCounterweights * 0.30 -
+    operatingPressure * 0.18;
 
-  chance = Math.max(0.42, Math.min(0.94, chance));
-  return runRandom(manager.occupantSeed, 732) < chance;
+  chance = Math.max(0.18, Math.min(0.92, chance));
+  return runRandom(manager.occupantSeed, 732 + months) < chance;
 }
 
 function activateManagerShielding(manager, months) {
@@ -1305,7 +1307,7 @@ function activateManagerShielding(manager, months) {
     return true;
   }
 
-  if (!canManagerStartShielding(manager)) return false;
+  if (!canManagerStartShielding(manager, months)) return false;
 
   manager.shieldingActive = true;
   manager.shieldingSeed = manager.occupantSeed;
@@ -2525,7 +2527,7 @@ function updateUiText() {
   } else if (STATE.timeMonths <= 12) {
     note.textContent = 'Months 1–12: executive signaling and harmful doctrine begin shaping branch behavior. If People / Legal / Compliance is captured, effective accountability is crushed but not erased. If the board is compromised too, then it effectively bottoms out.';
   } else if (STATE.timeMonths <= 24) {
-    note.textContent = 'Year 1-2: directors begin selecting managers who fit the local culture. Grounded neutral managers now more often shield their four ICs from a hostile director. Shielding persists until that manager is fired, turns over, or is manually changed - and it raises the manager’s own risk.';
+    note.textContent = 'Year 1-2: directors begin selecting managers who fit the local culture. Grounded neutral managers under hostile directors attempt to shield their four ICs; counterweights make that easier, operating pressure makes it harder. Shielding persists until that manager is fired, turns over, or is manually changed - and it raises the manager’s own risk.';
   } else if (STATE.timeMonths <= 36) {
     note.textContent = 'Year 2–3: hiring, promotion, and turnover begin changing who remains. Toxic branches now build exodus pressure gradually; once it gets high enough, neutral people start leaving in waves instead of tripping a cartoon cliff.';
   } else {
@@ -2943,7 +2945,7 @@ function bindInputTooltips() {
     ],
     grounded: [
       'Grounded Individual',
-      '<strong>A grounded individual is internally anchored under pressure.</strong> In the model, this means they are harder to capture, coerce, flatter, intimidate, or filter into toxic alignment. They can also act as a stabilizing buffer - especially as managers, where only grounded people can shield the team below them. They are not “perfect” or heroic; they are simply less permeable to Dark Triad normalization.'
+      '<strong>A grounded individual is internally anchored under pressure.</strong> In the model, this means they are harder to capture, coerce, flatter, intimidate, or filter into toxic alignment. They can also act as a stabilizing buffer - especially as managers, where only grounded people can shield the team below them, with stronger counterweights helping and operating pressure working against them. They are not “perfect” or heroic; they are simply less permeable to Dark Triad normalization.'
     ]
   };
 
