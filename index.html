@@ -1275,18 +1275,18 @@ function isExodusFlashNode(node, months = STATE.timeMonths) {
 
 function canManagerStartShielding(manager) {
   if (!manager || manager.level !== 4 || manager.currentType !== 'N') return false;
+  if (!isMoralResistor(manager)) return false;
   const director = manager.parentId ? NODE_MAP.get(manager.parentId) : null;
   if (!director || (director.currentType !== 'T' && director.currentType !== 'I')) return false;
 
   const effectiveCounterweights = getEffectiveCounterweightsRatio();
   const operatingPressure = STATE.controls.operatingPressure / 100;
   let chance =
-    0.20 +
-    effectiveCounterweights * 0.24 +
-    (isMoralResistor(manager) ? 0.40 : 0) -
-    operatingPressure * 0.08;
+    0.48 +
+    effectiveCounterweights * 0.34 -
+    operatingPressure * 0.06;
 
-  chance = Math.max(0.12, Math.min(0.82, chance));
+  chance = Math.max(0.42, Math.min(0.94, chance));
   return runRandom(manager.occupantSeed, 732) < chance;
 }
 
@@ -1307,6 +1307,7 @@ function activateManagerShielding(manager, months) {
 
 function getShieldingManager(manager) {
   if (!manager || manager.level !== 4 || manager.currentType !== 'N') return false;
+  if (!isMoralResistor(manager)) return false;
   if (!manager.shieldingActive || manager.shieldingSeed !== manager.occupantSeed) return false;
 
   const director = manager.parentId ? NODE_MAP.get(manager.parentId) : null;
@@ -2259,7 +2260,7 @@ function computeOneMonthStep(months) {
 
       const parent = NODE_MAP.get(node.parentId);
 
-      // Shielding is an occupant-level stance. Once a neutral manager starts shielding,
+      // Shielding is an occupant-level stance. Only grounded neutral managers can start shielding;
       // it persists until that manager is fired, turns over, or is manually/forcibly changed.
       if (node.level === 4 && prior === 'N') {
         activateManagerShielding(node, months);
@@ -2515,11 +2516,11 @@ function updateUiText() {
   } else if (STATE.timeMonths <= 12) {
     note.textContent = 'Months 1–12: executive signaling and harmful doctrine begin shaping branch behavior. If People / Legal / Compliance is captured, effective accountability is crushed but not erased. If the board is compromised too, then it effectively bottoms out.';
   } else if (STATE.timeMonths <= 24) {
-    note.textContent = 'Year 1–2: directors begin selecting managers who fit the local culture. Some neutral managers actively shield their four ICs from a hostile director. Shielding now persists until that manager is fired, turns over, or is manually changed — and it raises the manager’s own risk.';
+    note.textContent = 'Year 1-2: directors begin selecting managers who fit the local culture. Grounded neutral managers now more often shield their four ICs from a hostile director. Shielding persists until that manager is fired, turns over, or is manually changed - and it raises the manager’s own risk.';
   } else if (STATE.timeMonths <= 36) {
     note.textContent = 'Year 2–3: hiring, promotion, and turnover begin changing who remains. Toxic branches now build exodus pressure gradually; once it gets high enough, neutral people start leaving in waves instead of tripping a cartoon cliff.';
   } else {
-    note.textContent = 'Years 3–5: turnover compounds, exodus pressure can hollow out toxic branches, neutral managers can still shield pockets of ICs, and captured oversight degrades accountability while red flashes mark direct firings.';
+    note.textContent = 'Years 3-5: turnover compounds, exodus pressure can hollow out toxic branches, grounded managers can still shield pockets of ICs, and captured oversight degrades accountability while red flashes mark direct firings.';
   }
 
   updateInputHeat();
@@ -2933,7 +2934,7 @@ function bindInputTooltips() {
     ],
     grounded: [
       'Grounded Individual',
-      '<strong>A grounded individual is internally anchored under pressure.</strong> In the model, this means they are harder to capture, coerce, flatter, intimidate, or filter into toxic alignment. They are also more likely to act as a stabilizing buffer — especially as managers, where grounded people are more likely to shield the team below them. They are not “perfect” or heroic; they are simply less permeable to Dark Triad normalization.'
+      '<strong>A grounded individual is internally anchored under pressure.</strong> In the model, this means they are harder to capture, coerce, flatter, intimidate, or filter into toxic alignment. They can also act as a stabilizing buffer - especially as managers, where only grounded people can shield the team below them. They are not “perfect” or heroic; they are simply less permeable to Dark Triad normalization.'
     ]
   };
 
