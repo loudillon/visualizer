@@ -2322,11 +2322,12 @@ function computeOneMonthStep(months) {
       // Turnover: clean/unaffected people working under reds or captured leaders leave or get filtered out.
       // Exodus pressure now ramps instead of acting like a single cliff edge.
       if (computeTurnoverType(node, parent, months)) {
+        const turnoverWasGrounded = node.currentType === 'N' && isMoralResistor(node);
         replaceOccupant(node, months);
         const replacementType = resolveTurnoverReplacement(node, parent, months);
         node.currentType = replacementType;
         node.turnovered = true;
-        node.turnoverEvents.push({ months, replacementType });
+        node.turnoverEvents.push({ months, replacementType, turnoverWasGrounded });
         continue;
       }
 
@@ -2380,13 +2381,16 @@ function renderNode(node) {
   const elements = Array.from(document.querySelectorAll(`[data-id="${node.id}"]`));
   if (!elements.length) return;
   const firedEventThisMonth = node.firingEvents && node.firingEvents.find(evt => evt.months === STATE.timeMonths);
-  const turnoverThisMonth = node.turnoverEvents && node.turnoverEvents.some(evt => evt.months === STATE.timeMonths);
-  const suppressGroundedDuringFiring = Boolean(firedEventThisMonth && firedEventThisMonth.firedWasGrounded);
+  const turnoverEventThisMonth = node.turnoverEvents && node.turnoverEvents.find(evt => evt.months === STATE.timeMonths);
+  const suppressGroundedDuringReplacement = Boolean(
+    (firedEventThisMonth && firedEventThisMonth.firedWasGrounded) ||
+    (turnoverEventThisMonth && turnoverEventThisMonth.turnoverWasGrounded)
+  );
 
   const baseClass = node.special
     ? 'node leader special-node'
     : node.level === 5 ? 'node ic-dot' : 'node leader';
-  const resistorClass = !node.special && type === 'N' && isMoralResistor(node) && !suppressGroundedDuringFiring ? ' grounded-individual' : '';
+  const resistorClass = !node.special && type === 'N' && isMoralResistor(node) && !suppressGroundedDuringReplacement ? ' grounded-individual' : '';
 
   const fills = {
     T: '#C73E2E',
@@ -2401,38 +2405,43 @@ function renderNode(node) {
   };
 
   for (const el of elements) {
+    const applyBasePaint = () => {
+      const isGrounded = Boolean(resistorClass);
+      el.classList.remove('node-T', 'node-I', 'node-N', 'moral-resistor', 'grounded-individual', 'turnover-flash', 'fire-flash', 'focus-node');
+      el.setAttribute('class', `${baseClass} node-${type}${resistorClass}`);
+      el.setAttribute('fill', fills[type]);
+      el.setAttribute('stroke', isGrounded ? '#4BAFA9' : strokes[type]);
+      el.style.removeProperty('fill');
+      el.style.removeProperty('stroke');
+      el.style.removeProperty('stroke-width');
+      el.style.removeProperty('filter');
+
+      if (isGrounded) {
+        // Force the grounded color at the element level. This prevents SVG <use>
+        // inheritance / animation cleanup from leaving a thick neutral-gray outline.
+        el.style.setProperty('stroke', 'var(--grounded)', 'important');
+        el.style.setProperty('stroke-width', '2.6', 'important');
+        el.style.setProperty('filter', 'drop-shadow(0 0 2px rgba(75, 175, 169, 0.34))');
+      }
+    };
+
     // Full replace on every matching SVG element. querySelector() only repainted
     // the first match; duplicate ghosts can survive hot reload / interrupted init.
-    el.classList.remove('node-T', 'node-I', 'node-N', 'moral-resistor', 'grounded-individual', 'turnover-flash', 'fire-flash', 'focus-node');
-    const isGrounded = Boolean(resistorClass);
-    el.setAttribute('class', `${baseClass} node-${type}${resistorClass}`);
-    el.setAttribute('fill', fills[type]);
-    el.setAttribute('stroke', isGrounded ? '#4BAFA9' : strokes[type]);
-    el.style.removeProperty('fill');
-    el.style.removeProperty('stroke');
-    el.style.removeProperty('stroke-width');
-    el.style.removeProperty('filter');
-
-    if (isGrounded) {
-      // Force the grounded color at the element level. This prevents SVG <use>
-      // inheritance / animation cleanup from leaving a thick neutral-gray outline.
-      el.style.setProperty('stroke', 'var(--grounded)', 'important');
-      el.style.setProperty('stroke-width', '2.6', 'important');
-      el.style.setProperty('filter', 'drop-shadow(0 0 2px rgba(75, 175, 169, 0.34))');
-    }
+    applyBasePaint();
 
     // Reconciliation does a hard repaint, so flash classes are applied after
     // base classes and attributes. requestAnimationFrame gives the browser a
     // neutral frame boundary, which makes SVG animations reliably restart.
     el.classList.remove('turnover-flash', 'fire-flash');
-    if (firedEventThisMonth || turnoverThisMonth) {
+    if (firedEventThisMonth || turnoverEventThisMonth) {
       void el.getBoundingClientRect();
       requestAnimationFrame(() => {
         if (firedEventThisMonth) {
           el.classList.add('fire-flash');
-        } else if (turnoverThisMonth) {
+        } else if (turnoverEventThisMonth) {
           el.classList.add('turnover-flash');
         }
+        el.addEventListener('animationend', applyBasePaint, { once: true });
       });
     }
 
