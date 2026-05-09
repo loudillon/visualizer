@@ -1924,13 +1924,14 @@ function buildMobileSvg() {
   if (!guides || !edges || !nodes) return;
 
   [
-    ['CEO', 34, 195, 'middle'],
+    ['CEO', getMobileNodePosition(NODE_MAP.get('1')).y - 13, getMobileNodePosition(NODE_MAP.get('1')).x, 'middle'],
+    ['REGULATORY', getMobileNodePosition(NODE_MAP.get(BOARD_NODE_ID)).y - 13, getMobileNodePosition(NODE_MAP.get(BOARD_NODE_ID)).x, 'middle'],
     ['BRANCHES', 84, 10, 'start']
   ].forEach(([label, y, x, anchor]) => {
     const text = document.createElementNS(SVG_NS, 'text');
     text.setAttribute('class', 'mobile-level-label');
     text.setAttribute('x', x);
-    text.setAttribute('y', y + 3);
+    text.setAttribute('y', y);
     text.setAttribute('text-anchor', anchor);
     text.textContent = label;
     guides.appendChild(text);
