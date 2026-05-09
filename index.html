@@ -481,7 +481,7 @@
   svg.mobile-cascade {
     width: 100%;
     height: auto;
-    aspect-ratio: 390 / 720;
+    aspect-ratio: 390 / 1180;
     display: none;
     background: var(--bg-2);
   }
@@ -841,7 +841,7 @@
   @media (max-width: 680px) {
     body { padding: 10px; }
     .scenario-strip { grid-template-columns: 1fr; gap: 8px; }
-    .tree-frame { aspect-ratio: 390 / 720; }
+    .tree-frame { aspect-ratio: 390 / 1180; }
     svg.cascade { display: none; }
     svg.mobile-cascade { display: block; }
     .tree-topbar {
@@ -1000,7 +1000,7 @@
           <g id="clusters"></g>
           <g id="nodes"></g>
         </svg>
-        <svg class="mobile-cascade" viewBox="0 0 390 720" preserveAspectRatio="xMidYMin meet" role="img" aria-labelledby="mobile-cascade-title mobile-cascade-desc">
+        <svg class="mobile-cascade" viewBox="0 0 390 1180" preserveAspectRatio="xMidYMin meet" role="img" aria-labelledby="mobile-cascade-title mobile-cascade-desc">
           <title id="mobile-cascade-title">Mobile circle hierarchy map</title>
           <desc id="mobile-cascade-desc">A mobile version of the organizational cascade where every role is represented by a circle. Color, flashes, grounded outlines, and teal shielding lines use the same model state as the desktop map.</desc>
           <g id="mobile-guides"></g>
@@ -1873,32 +1873,42 @@ function getMobileNodePosition(node) {
     if (count <= 1) return (left + right) / 2;
     return left + (index / (count - 1)) * (right - left);
   };
+  const branchTop = lane => 112 + lane * 204;
+  const branchLeft = 58;
+  const branchRight = 362;
+  const managerOffsets = [-32, 0, 32];
+  const icOffsets = [-10.5, -3.5, 3.5, 10.5];
 
   if (node.special === 'board') return { x: 354, y: 32, r: 7 };
   if (node.level === 1) return { x: 195, y: 34, r: 8.5 };
 
   if (node.level === 2) {
-    const index = Number(node.id.split('-')[1]);
-    return { x: spread(index, 5, 50, 340), y: 100, r: 7.2 };
+    return { x: 34, y: branchTop(node.lane) + 8, r: 6.8 };
   }
 
   if (node.level === 3) {
     const index = Number(node.id.split('-')[1]);
-    return { x: spread(index, 15, 24, 366), y: 184, r: 5.2 };
+    const local = index % 3;
+    return { x: spread(local, 3, branchLeft + 16, branchRight - 16), y: branchTop(node.lane) + 36, r: 5.2 };
   }
 
   if (node.level === 4) {
     const index = Number(node.id.split('-')[1]);
-    const col = index % 15;
-    const row = Math.floor(index / 15);
-    return { x: spread(col, 15, 24, 366), y: 268 + row * 42, r: 4.2 };
+    const directorLocal = Math.floor((index % 9) / 3);
+    const managerLocal = index % 3;
+    const directorX = spread(directorLocal, 3, branchLeft + 16, branchRight - 16);
+    return { x: directorX + managerOffsets[managerLocal], y: branchTop(node.lane) + 82, r: 4.2 };
   }
 
   if (node.level === 5) {
     const index = Number(node.id.split('-')[1]);
-    const col = index % 20;
-    const row = Math.floor(index / 20);
-    return { x: spread(col, 20, 22, 368), y: 418 + row * 32, r: 2.55 };
+    const managerIndex = Math.floor(index / 4);
+    const localIc = index % 4;
+    const managerNode = NODE_MAP.get(`4-${managerIndex}`);
+    const managerPos = getMobileNodePosition(managerNode);
+    const managerLocal = managerIndex % 3;
+    const row = Math.floor(managerLocal / 3);
+    return { x: managerPos.x + icOffsets[localIc], y: branchTop(node.lane) + 124 + row * 18, r: 2.55 };
   }
 
   return { x: 195, y: 34, r: 6 };
@@ -1917,10 +1927,7 @@ function buildMobileSvg() {
 
   [
     ['CEO', 34],
-    ['VP', 100],
-    ['DIR', 184],
-    ['MGR', 280],
-    ['IC', 460]
+    ['BRANCHES', 120]
   ].forEach(([label, y]) => {
     const text = document.createElementNS(SVG_NS, 'text');
     text.setAttribute('class', 'mobile-level-label');
@@ -1931,11 +1938,13 @@ function buildMobileSvg() {
   });
 
   for (let lane = 0; lane < 5; lane++) {
-    const x = getMobileNodePosition(NODE_MAP.get(`2-${lane}`)).x;
+    const vp = NODE_MAP.get(`2-${lane}`);
+    const pos = getMobileNodePosition(vp);
     const label = document.createElementNS(SVG_NS, 'text');
     label.setAttribute('class', 'mobile-branch-label');
-    label.setAttribute('x', x);
-    label.setAttribute('y', 82);
+    label.setAttribute('x', 92);
+    label.setAttribute('y', pos.y + 3);
+    label.setAttribute('text-anchor', 'start');
     label.textContent = DEPARTMENT_NAMES[lane].split(' ')[0].toUpperCase();
     guides.appendChild(label);
   }
