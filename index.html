@@ -481,7 +481,7 @@
   svg.mobile-cascade {
     width: 100%;
     height: auto;
-    aspect-ratio: 390 / 1180;
+    aspect-ratio: 390 / 850;
     display: none;
     background: var(--bg-2);
   }
@@ -841,7 +841,7 @@
   @media (max-width: 680px) {
     body { padding: 10px; }
     .scenario-strip { grid-template-columns: 1fr; gap: 8px; }
-    .tree-frame { aspect-ratio: 390 / 1180; }
+    .tree-frame { aspect-ratio: 390 / 850; }
     svg.cascade { display: none; }
     svg.mobile-cascade { display: block; }
     .tree-topbar {
@@ -1000,7 +1000,7 @@
           <g id="clusters"></g>
           <g id="nodes"></g>
         </svg>
-        <svg class="mobile-cascade" viewBox="0 0 390 1180" preserveAspectRatio="xMidYMin meet" role="img" aria-labelledby="mobile-cascade-title mobile-cascade-desc">
+        <svg class="mobile-cascade" viewBox="0 0 390 850" preserveAspectRatio="xMidYMin meet" role="img" aria-labelledby="mobile-cascade-title mobile-cascade-desc">
           <title id="mobile-cascade-title">Mobile circle hierarchy map</title>
           <desc id="mobile-cascade-desc">A mobile version of the organizational cascade where every role is represented by a circle. Color, flashes, grounded outlines, and teal shielding lines use the same model state as the desktop map.</desc>
           <g id="mobile-guides"></g>
@@ -1873,7 +1873,7 @@ function getMobileNodePosition(node) {
     if (count <= 1) return (left + right) / 2;
     return left + (index / (count - 1)) * (right - left);
   };
-  const branchTop = lane => 112 + lane * 204;
+  const branchTop = lane => 88 + lane * 150;
   const branchLeft = 58;
   const branchRight = 362;
   const managerOffsets = [-32, 0, 32];
@@ -1889,7 +1889,7 @@ function getMobileNodePosition(node) {
   if (node.level === 3) {
     const index = Number(node.id.split('-')[1]);
     const local = index % 3;
-    return { x: spread(local, 3, branchLeft + 16, branchRight - 16), y: branchTop(node.lane) + 36, r: 5.2 };
+    return { x: spread(local, 3, branchLeft + 16, branchRight - 16), y: branchTop(node.lane) + 30, r: 5.2 };
   }
 
   if (node.level === 4) {
@@ -1897,7 +1897,7 @@ function getMobileNodePosition(node) {
     const directorLocal = Math.floor((index % 9) / 3);
     const managerLocal = index % 3;
     const directorX = spread(directorLocal, 3, branchLeft + 16, branchRight - 16);
-    return { x: directorX + managerOffsets[managerLocal], y: branchTop(node.lane) + 82, r: 4.2 };
+    return { x: directorX + managerOffsets[managerLocal], y: branchTop(node.lane) + 66, r: 4.2 };
   }
 
   if (node.level === 5) {
@@ -1906,9 +1906,7 @@ function getMobileNodePosition(node) {
     const localIc = index % 4;
     const managerNode = NODE_MAP.get(`4-${managerIndex}`);
     const managerPos = getMobileNodePosition(managerNode);
-    const managerLocal = managerIndex % 3;
-    const row = Math.floor(managerLocal / 3);
-    return { x: managerPos.x + icOffsets[localIc], y: branchTop(node.lane) + 124 + row * 18, r: 2.55 };
+    return { x: managerPos.x + icOffsets[localIc], y: branchTop(node.lane) + 98, r: 2.55 };
   }
 
   return { x: 195, y: 34, r: 6 };
@@ -1927,7 +1925,7 @@ function buildMobileSvg() {
 
   [
     ['CEO', 34],
-    ['BRANCHES', 120]
+    ['BRANCHES', 96]
   ].forEach(([label, y]) => {
     const text = document.createElementNS(SVG_NS, 'text');
     text.setAttribute('class', 'mobile-level-label');
@@ -1953,6 +1951,7 @@ function buildMobileSvg() {
     if (!node.parentId) continue;
     const parent = NODE_MAP.get(node.parentId);
     if (!parent) continue;
+    if (parent.level === 1) continue;
     const a = getMobileNodePosition(parent);
     const b = getMobileNodePosition(node);
     const line = document.createElementNS(SVG_NS, 'line');
