@@ -513,6 +513,21 @@
     stroke-width: 0.55;
   }
 
+  .mobile-exodus-label {
+    opacity: 0;
+    fill: var(--turnover);
+    font-size: 6.5px;
+    letter-spacing: 0.11em;
+    text-anchor: middle;
+    transition: opacity 0.55s ease;
+  }
+
+  .mobile-exodus-node {
+    stroke: var(--turnover) !important;
+    stroke-width: 2.2 !important;
+    filter: drop-shadow(0 0 3px rgba(210, 139, 69, 0.32));
+  }
+
   svg text {
     font-family: Consolas, "Courier New", monospace;
     fill: var(--ink-2);
@@ -1947,6 +1962,14 @@ function buildMobileSvg() {
     label.setAttribute('text-anchor', 'middle');
     label.textContent = DEPARTMENT_NAMES[lane].split(' ')[0].toUpperCase();
     guides.appendChild(label);
+
+    const exodusLabel = document.createElementNS(SVG_NS, 'text');
+    exodusLabel.setAttribute('class', 'mobile-exodus-label');
+    exodusLabel.setAttribute('data-mobile-exodus', lane);
+    exodusLabel.setAttribute('x', pos.x);
+    exodusLabel.setAttribute('y', pos.y + 17);
+    exodusLabel.textContent = 'EXODUS';
+    guides.appendChild(exodusLabel);
   }
 
   for (const node of NODES) {
@@ -1996,6 +2019,8 @@ function updateBranchExodusVisuals() {
     const laneRect = document.querySelector(`[data-lane="${lane}"]`);
     const badge = document.querySelector(`[data-exodus-badge="${lane}"]`);
     const badgeText = document.querySelector(`[data-exodus-badge-text="${lane}"]`);
+    const mobileVp = document.querySelector(`svg.mobile-cascade [data-id="2-${lane}"]`);
+    const mobileLabel = document.querySelector(`[data-mobile-exodus="${lane}"]`);
     const triggeredMonth = STATE.exodusTriggeredMonths[lane];
     const monthsSinceTrigger = triggeredMonth == null ? 0 : Math.max(0, STATE.timeMonths - triggeredMonth);
     const fadeMonths = 18;
@@ -2027,6 +2052,22 @@ function updateBranchExodusVisuals() {
 
     if (badgeText) {
       badgeText.textContent = metrics.exodusTriggered ? 'EXODUS' : 'EXODUS';
+    }
+
+    if (mobileVp) {
+      mobileVp.style.setProperty('--exodus-rest-opacity', exodusOpacity.toFixed(3));
+      mobileVp.classList.toggle('mobile-exodus-node', exodusOpacity > 0);
+      if (triggeredMonth === STATE.timeMonths) {
+        mobileVp.classList.remove('lane-exodus-flash');
+        void mobileVp.getBoundingClientRect();
+        mobileVp.classList.add('lane-exodus-flash');
+      } else {
+        mobileVp.classList.remove('lane-exodus-flash');
+      }
+    }
+
+    if (mobileLabel) {
+      mobileLabel.style.opacity = exodusOpacity.toFixed(3);
     }
   }
 }
@@ -2581,10 +2622,11 @@ function renderNode(node) {
   for (const el of elements) {
     const isMobileNode = el.classList.contains('mobile-node') || (el.ownerSVGElement && el.ownerSVGElement.classList.contains('mobile-cascade'));
     const mobileClass = isMobileNode ? ` mobile-node${node.level === 5 ? ' mobile-ic' : ''}` : '';
+    const mobileExodusClass = el.classList.contains('mobile-exodus-node') ? ' mobile-exodus-node' : '';
     const applyBasePaint = () => {
       const isGrounded = Boolean(resistorClass);
       el.classList.remove('node-T', 'node-I', 'node-N', 'moral-resistor', 'grounded-individual', 'turnover-flash', 'fire-flash', 'focus-node');
-      el.setAttribute('class', `${baseClass}${mobileClass} node-${type}${resistorClass}`);
+      el.setAttribute('class', `${baseClass}${mobileClass} node-${type}${resistorClass}${mobileExodusClass}`);
       el.setAttribute('fill', fills[type]);
       el.setAttribute('stroke', isGrounded ? '#4BAFA9' : strokes[type]);
       el.style.removeProperty('fill');
