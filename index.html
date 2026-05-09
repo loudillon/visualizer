@@ -510,6 +510,9 @@
   .lane-exodus {
     stroke: var(--turnover);
     fill: rgba(210, 139, 69, 0.05);
+    stroke-opacity: var(--exodus-lane-opacity, 1);
+    fill-opacity: var(--exodus-lane-opacity, 1);
+    transition: fill-opacity 0.55s ease, stroke-opacity 0.55s ease;
   }
 
   @keyframes exodusPulse {
@@ -1816,10 +1819,15 @@ function updateBranchExodusVisuals() {
     const laneRect = document.querySelector(`[data-lane="${lane}"]`);
     const badge = document.querySelector(`[data-exodus-badge="${lane}"]`);
     const badgeText = document.querySelector(`[data-exodus-badge-text="${lane}"]`);
+    const triggeredMonth = STATE.exodusTriggeredMonths[lane];
+    const monthsSinceTrigger = triggeredMonth == null ? 0 : Math.max(0, STATE.timeMonths - triggeredMonth);
+    const fadeMonths = 18;
+    const exodusOpacity = triggeredMonth == null ? 0 : Math.max(0, 1 - (monthsSinceTrigger / fadeMonths));
 
     if (laneRect) {
-      laneRect.classList.toggle('lane-exodus', metrics.exodusTriggered);
-      if (STATE.exodusTriggeredMonths[lane] === STATE.timeMonths) {
+      laneRect.style.setProperty('--exodus-lane-opacity', exodusOpacity.toFixed(3));
+      laneRect.classList.toggle('lane-exodus', exodusOpacity > 0);
+      if (triggeredMonth === STATE.timeMonths) {
         laneRect.classList.remove('lane-exodus-flash');
         void laneRect.getBoundingClientRect();
         laneRect.classList.add('lane-exodus-flash');
@@ -1829,12 +1837,8 @@ function updateBranchExodusVisuals() {
     }
 
     if (badge) {
-      const triggeredMonth = STATE.exodusTriggeredMonths[lane];
-      const monthsSinceTrigger = triggeredMonth == null ? 0 : Math.max(0, STATE.timeMonths - triggeredMonth);
-      const fadeMonths = 18;
-      const badgeOpacity = triggeredMonth == null ? 0 : Math.max(0, 1 - (monthsSinceTrigger / fadeMonths));
-      badge.style.setProperty('--exodus-rest-opacity', badgeOpacity.toFixed(3));
-      badge.classList.toggle('visible', badgeOpacity > 0);
+      badge.style.setProperty('--exodus-rest-opacity', exodusOpacity.toFixed(3));
+      badge.classList.toggle('visible', exodusOpacity > 0);
       if (triggeredMonth === STATE.timeMonths) {
         badge.classList.remove('lane-exodus-flash');
         void badge.getBoundingClientRect();
