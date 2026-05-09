@@ -1966,8 +1966,9 @@ function buildMobileSvg() {
     const exodusLabel = document.createElementNS(SVG_NS, 'text');
     exodusLabel.setAttribute('class', 'mobile-exodus-label');
     exodusLabel.setAttribute('data-mobile-exodus', lane);
-    exodusLabel.setAttribute('x', pos.x);
-    exodusLabel.setAttribute('y', pos.y + 17);
+    exodusLabel.setAttribute('x', pos.x + 14);
+    exodusLabel.setAttribute('y', pos.y + 2);
+    exodusLabel.setAttribute('text-anchor', 'start');
     exodusLabel.textContent = 'EXODUS';
     guides.appendChild(exodusLabel);
   }
