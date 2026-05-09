@@ -20,7 +20,10 @@
     --influence-soft: rgba(139, 123, 196, 0.16);
     --clean: #8AA876;
     --clean-soft: rgba(138, 168, 118, 0.12);
+    --grounded: #4BAFA9;
+    --grounded-soft: rgba(75, 175, 169, 0.14);
     --turnover: #D28B45;
+    --firing: #8F231A;
     --gold: #C19A5B;
   }
 
@@ -93,7 +96,7 @@
   .scenario-strip {
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 7px;
+    gap: 9px;
   }
 
   .scenario-card {
@@ -122,7 +125,7 @@
     text-transform: uppercase;
     letter-spacing: 0.11em;
     color: var(--gold);
-    margin-bottom: 3px;
+    margin-bottom: 2px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -132,8 +135,8 @@
 
   .scenario-copy {
     color: var(--ink-2);
-    font-size: 10.5px;
-    line-height: 1.12;
+    font-size: 10.3px;
+    line-height: 1.15;
   }
 
   .main {
@@ -368,19 +371,20 @@
   .dot-O { background: var(--turnover); }
   .dot-N { border: 1px solid var(--ink-3); background: transparent; }
   .dot-R {
-    border: 2px dashed var(--clean);
+    border: 2px solid var(--grounded);
     background: transparent;
+    box-shadow: 0 0 0 1.5px rgba(46, 221, 211, 0.42);
   }
   .dot-F {
-    background: var(--trait);
-    box-shadow: 0 0 0 2px rgba(199, 62, 46, 0.22);
+    background: var(--firing);
+    box-shadow: 0 0 0 2px rgba(143, 35, 26, 0.22);
   }
   .dot-S {
     width: 12px;
     height: 10px;
     border-radius: 3px;
-    border: 1.2px solid var(--clean);
-    background: rgba(138, 168, 118, 0.12);
+    border: 1.5px solid var(--grounded);
+    background: var(--grounded-soft);
   }
   .dot-X {
     width: 12px;
@@ -415,26 +419,35 @@
     min-height: 0;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
-    gap: 7px;
+    align-content: stretch;
+    gap: 8px;
   }
 
   .tree-topbar {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr);
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
+    gap: 8px;
     background: var(--bg-2);
     border: 1px solid var(--rule);
     border-radius: 7px;
-    padding: 7px 10px;
-    min-height: 34px;
+    padding: 4px 8px;
+    min-height: 27px;
   }
 
   .status {
     font-family: Consolas, "Courier New", monospace;
     color: var(--ink-2);
-    font-size: 10px;
-    line-height: 1.25;
+    font-size: 9.5px;
+    line-height: 1.12;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #counts-line {
+    text-align: right;
   }
 
   .status strong {
@@ -449,26 +462,19 @@
     border-radius: 7px;
     position: relative;
     overflow: hidden;
-    padding: 3px 3px 2px;
+    padding: 0;
+    aspect-ratio: 1780 / 820;
+    align-self: start;
   }
 
   .tree-frame::before {
-    content: "Fig. 04 — Dark Triad cascade tree";
-    position: absolute;
-    left: 20px;
-    top: -9px;
-    padding: 0 8px;
-    background: var(--bg);
-    color: var(--gold);
-    font-family: Consolas, "Courier New", monospace;
-    font-size: 9px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    display: none;
   }
 
   svg.cascade {
     width: 100%;
-    height: 100%;
+    height: auto;
+    aspect-ratio: 1780 / 820;
     display: block;
   }
 
@@ -543,12 +549,15 @@
   }
 
   .shielded-cluster {
-    stroke: var(--clean);
-    fill: rgba(138, 168, 118, 0.08);
+    stroke: var(--grounded);
+    stroke-width: 1.35;
+    fill: rgba(75, 175, 169, 0.18);
+    filter: drop-shadow(0 0 5px rgba(75, 175, 169, 0.28));
   }
 
   .shielded-label {
-    fill: var(--clean);
+    fill: var(--grounded);
+    font-weight: 700;
   }
 
   .oversight-link,
@@ -655,19 +664,19 @@
 
   @keyframes fireFlash {
     0% {
-      fill: var(--trait);
-      stroke: var(--trait);
+      fill: var(--firing);
+      stroke: var(--firing);
       opacity: 1;
-      filter: drop-shadow(0 0 0 rgba(199, 62, 46, 0));
+      filter: drop-shadow(0 0 0 rgba(143, 35, 26, 0));
     }
     38% {
-      fill: var(--trait);
-      stroke: var(--trait);
+      fill: var(--firing);
+      stroke: var(--firing);
       opacity: 1;
-      filter: drop-shadow(0 0 10px rgba(199, 62, 46, 0.95));
+      filter: drop-shadow(0 0 10px rgba(143, 35, 26, 0.92));
     }
     100% {
-      filter: drop-shadow(0 0 0 rgba(199, 62, 46, 0));
+      filter: drop-shadow(0 0 0 rgba(143, 35, 26, 0));
     }
   }
 
@@ -676,10 +685,12 @@
   }
 
 
-  .moral-resistor {
-    stroke: var(--clean) !important;
-    stroke-width: 1.35;
-    stroke-dasharray: 2 2;
+  .moral-resistor,
+  .grounded-individual {
+    stroke: var(--grounded) !important;
+    stroke-width: 2.6 !important;
+    stroke-dasharray: none !important;
+    filter: drop-shadow(0 0 2px rgba(75, 175, 169, 0.34));
   }
 
   .node:hover {
@@ -785,14 +796,14 @@
   @media (max-width: 1100px) {
     body { overflow: auto; }
     .app { height: auto; }
-    .scenario-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .scenario-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     .main { grid-template-columns: 1fr; }
-    .tree-frame { height: 650px; }
+    .tree-frame { aspect-ratio: 1780 / 820; }
   }
 
   @media (max-width: 680px) {
     body { padding: 10px; }
-    .scenario-strip { grid-template-columns: 1fr; }
+    .scenario-strip { grid-template-columns: 1fr; gap: 8px; }
   }
 </style>
 </head>
@@ -806,9 +817,9 @@
 <div class="app">
   <header>
     <div class="eyebrow">Organizational pathology · Dark Triad cascade</div>
-    <h1>How the few shape the <em>many</em>.</h1>
+    <h1>How a <em>few</em> shape the many.</h1>
     <p class="deck">
-      A one-page simulator of how Dark Triad leadership can spread through culture, selection, turnover, and resistance.
+      A simulator exposing how Dark Triad personalities can shape organizations through incentives, selection, turnover, and accountability systems.
     </p>
   </header>
 
@@ -859,7 +870,7 @@
         <div class="time-label-row" aria-hidden="true">
           <span>0y</span><span>1y</span><span>2y</span><span>3y</span><span>4y</span><span>5y</span>
         </div>
-        <button class="btn" id="play-simulation" type="button">Play 60-month simulation</button>
+        <button class="btn" id="play-simulation" type="button" aria-label="Play or pause simulation" title="Play / pause">▶</button>
         <button class="btn" id="new-run" type="button">New run</button>
         <div class="note" id="timeline-note">Month 0: initial conditions before culture has had time to propagate.</div>
       </section>
@@ -867,15 +878,15 @@
       <section class="panel">
         <div class="panel-title">Legend</div>
         <div class="legend">
-          <div class="legend-item"><span class="dot dot-T"></span><span><strong>Red</strong> = Dark Triad trait carrier</span></div>
-          <div class="legend-item"><span class="dot dot-I"></span><span><strong>Purple</strong> = behaviorally captured</span></div>
-          <div class="legend-item"><span class="dot dot-N"></span><span><strong>Plain outline</strong> = clean occupant</span></div>
-          <div class="legend-item"><span class="dot dot-R"></span><span><strong>Green dashed outline</strong> = resistant clean individual</span></div>
-          <div class="legend-item"><span class="dot dot-S"></span><span><strong>Green shell</strong> = shielding manager/team</span></div>
+          <div class="legend-item has-help" data-help="darkTriadState"><span class="dot dot-T"></span><span><strong>Dark Triad</strong></span></div>
+          <div class="legend-item has-help" data-help="capturedBehavior"><span class="dot dot-I"></span><span><strong>Captured behavior</strong></span></div>
+          <div class="legend-item has-help" data-help="neutral"><span class="dot dot-N"></span><span><strong>Neutral</strong></span></div>
+          <div class="legend-item has-help" data-help="grounded"><span class="dot dot-R"></span><span><strong>Grounded individual</strong></span></div>
+          <div class="legend-item"><span class="dot dot-S"></span><span><strong>Teal shell</strong> = grounded manager shielding team</span></div>
           <div class="legend-item"><span class="dot dot-O"></span><span><strong>Yellow flash</strong> = turnover</span></div>
-          <div class="legend-item"><span class="dot dot-F"></span><span><strong>Red flash</strong> = firing</span></div>
+          <div class="legend-item"><span class="dot dot-F"></span><span><strong>Dark red flash</strong> = firing</span></div>
           <div class="legend-item"><span class="dot dot-X"></span><span><strong>Exodus badge</strong> = branch under exodus pressure</span></div>
-          <div class="legend-note">Resistant is a tougher subset of clean, not a separate color-state.</div>
+          <div class="legend-note">Hover the first four legend items for more context.</div>
         </div>
       </section>
     </aside>
@@ -883,21 +894,21 @@
     <section class="tree-column">
       <div class="tree-topbar">
         <div class="status" id="status-line"><strong>Founder Rot</strong> · Year 0 · 246 people</div>
-        <div class="status" id="counts-line">Dark Triad 0 · Influenced 0 · Clean 246</div>
+        <div class="status" id="counts-line">Dark Triad 0 · Influenced 0 · Neutral 246</div>
       </div>
 
       <div class="tree-frame">
-        <svg class="cascade" viewBox="0 0 1800 740" role="img" aria-labelledby="cascade-title cascade-desc">
+        <svg class="cascade" viewBox="10 6 1780 796" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="cascade-title cascade-desc">
           <title id="cascade-title">Dark Triad organizational cascade tree</title>
-          <desc id="cascade-desc">A 246-person organization with CEO, VP, Director, Manager, and grouped IC layers; five real departments; a People / Legal / Compliance oversight branch; and a Board / External Regulator node that can police oversight. Dark Triad trait carriers, influenced behavior, shielding, exodus, and clean resistance are shown as different node colors.</desc>
+          <desc id="cascade-desc">A 246-person organization with CEO, VP, Director, Manager, and grouped IC layers; five real departments; a People / Legal / Compliance oversight branch; and a Board / External Regulator node that can police oversight. Dark Triad trait carriers, influenced behavior, shielding, exodus, and grounded resistance are shown as different node colors.</desc>
 
           <defs>
             <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
               <path d="M2 1L8 5L2 9" fill="none" stroke="#7A7264" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
             </marker>
-            <symbol id="fig" viewBox="0 0 10 24">
-              <circle cx="5" cy="3.5" r="3.5" fill="inherit" stroke="inherit"/>
-              <rect x="0.5" y="9" width="9" height="14" rx="2" fill="inherit" stroke="inherit"/>
+            <symbol id="fig" viewBox="0 0 10 24" overflow="visible">
+              <circle cx="5" cy="4.1" r="3.35" fill="inherit" stroke="inherit"/>
+              <rect x="0.5" y="9.5" width="9" height="13.5" rx="2" fill="inherit" stroke="inherit"/>
             </symbol>
           </defs>
 
@@ -908,8 +919,8 @@
             <text class="input-text" x="227.5" y="38" text-anchor="middle">Dark Triad</text>
           </g>
           <g id="inp-pressureSelection">
-            <rect class="input-box" x="672" y="16" width="360" height="34" rx="3"/>
-            <text class="input-text" x="852" y="38" text-anchor="middle">Operating Pressure + Selection</text>
+            <rect class="input-box" x="722" y="16" width="260" height="34" rx="3"/>
+            <text class="input-text" x="852" y="38" text-anchor="middle">Operating Pressure</text>
           </g>
           <g id="inp-accountability">
             <rect class="input-box" x="1468" y="16" width="198" height="34" rx="3"/>
@@ -967,11 +978,11 @@ const SVG_WIDTH = 1800;
 const PADDING = 92;
 
 const TIER_Y = {
-  1: 82,
-  2: 188,
-  3: 326,
-  4: 500,
-  5: 650
+  1: 80,
+  2: 205,
+  3: 365,
+  4: 570,
+  5: 755
 };
 
 const ROLE_NAMES = {
@@ -985,7 +996,7 @@ const ROLE_NAMES = {
 const TYPE_NAMES = {
   T: 'Dark Triad trait carrier',
   I: 'Behaviorally captured',
-  N: 'Clean / resistant'
+  N: 'Neutral / grounded'
 };
 
 const TYPE_ORDER = ['T', 'I', 'N'];
@@ -1008,8 +1019,8 @@ const SCENARIOS = {
   },
   cleanDirty: {
     id: 'cleanDirty',
-    name: 'Clean Leader, Dirty Machine',
-    short: 'Clean CEO, but harmful doctrine and extraction incentives still produce captured behavior.',
+    name: 'Neutral Leader, Dirty Machine',
+    short: 'Neutral CEO, but harmful doctrine and extraction incentives still produce captured behavior.',
     controls: { darkTriad: 4, operatingPressure: 89, counterweights: 18 },
     forcedTypes: { '1': 'N' },
     executiveBias: 0.75
@@ -1041,7 +1052,7 @@ const SCENARIOS = {
   customPlacement: {
     id: 'customPlacement',
     name: 'Custom Placement',
-    short: 'Click nodes to place red/purple/clean, then run the timeline.',
+    short: 'Click nodes to place red/purple/neutral, then run the timeline.',
     controls: { darkTriad: 4, operatingPressure: 50, counterweights: 50 },
     forcedTypes: {},
     executiveBias: 1.0,
@@ -1137,6 +1148,7 @@ function registerNode(node) {
 
 function resetRuntimeState() {
   STATE.exodusTriggeredMonths = {};
+  STATE.exodusFlashNodes = {};
   STATE.oversightCollapseMonth = null;
   STATE.effectiveCounterweights = STATE.controls.counterweights;
 
@@ -1248,6 +1260,25 @@ function getBranchMetrics(lane, typeMap = null) {
   return { ...counts, total, weightedDensity, cleanShare, exodusPressure, exodusTriggered };
 }
 
+function getExodusFlashNodeIds(lane, months) {
+  const branchNodes = NODES.filter(node => !node.special && node.lane === lane && node.level >= 3);
+  const neutralFirst = branchNodes.filter(node => node.currentType === 'N');
+  const fallback = branchNodes.filter(node => node.currentType !== 'T');
+  const pool = neutralFirst.length ? neutralFirst : fallback;
+  const sorted = [...pool].sort((a, b) => {
+    const ra = runRandom(a.occupantSeed, 940 + months);
+    const rb = runRandom(b.occupantSeed, 940 + months);
+    return ra - rb;
+  });
+  return sorted.slice(0, Math.min(6, Math.max(3, Math.ceil(pool.length * 0.18)))).map(node => node.id);
+}
+
+function isExodusFlashNode(node, months = STATE.timeMonths) {
+  if (!node || node.special) return false;
+  const ids = STATE.exodusFlashNodes[months];
+  return Boolean(ids && ids.includes(node.id));
+}
+
 function canManagerStartShielding(manager) {
   if (!manager || manager.level !== 4 || manager.currentType !== 'N') return false;
   const director = manager.parentId ? NODE_MAP.get(manager.parentId) : null;
@@ -1256,12 +1287,12 @@ function canManagerStartShielding(manager) {
   const effectiveCounterweights = getEffectiveCounterweightsRatio();
   const operatingPressure = STATE.controls.operatingPressure / 100;
   let chance =
-    0.18 +
-    effectiveCounterweights * 0.22 +
-    (isMoralResistor(manager) ? 0.28 : 0) -
-    operatingPressure * 0.10;
+    0.20 +
+    effectiveCounterweights * 0.24 +
+    (isMoralResistor(manager) ? 0.40 : 0) -
+    operatingPressure * 0.08;
 
-  chance = Math.max(0.10, Math.min(0.72, chance));
+  chance = Math.max(0.12, Math.min(0.82, chance));
   return runRandom(manager.occupantSeed, 732) < chance;
 }
 
@@ -1575,7 +1606,7 @@ function buildTree() {
     registerNode({
       id: BOARD_NODE_ID,
       x: oversightNode.x,
-      y: 100,
+      y: 124,
       level: 0,
       parentId: null,
       seed: hashSeed(BOARD_NODE_ID),
@@ -1615,16 +1646,16 @@ function buildStaticSvg() {
     const x = PADDING + i * laneWidth;
     const rect = document.createElementNS(SVG_NS, 'rect');
     rect.setAttribute('x', x);
-    rect.setAttribute('y', 145);
+    rect.setAttribute('y', 162);
     rect.setAttribute('width', laneWidth);
-    rect.setAttribute('height', 505);
+    rect.setAttribute('height', 642);
     rect.setAttribute('class', 'lane');
     rect.setAttribute('data-lane', i);
     lanes.appendChild(rect);
 
     const label = document.createElementNS(SVG_NS, 'text');
     label.setAttribute('x', x + laneWidth / 2);
-    label.setAttribute('y', 158);
+    label.setAttribute('y', 176);
     label.setAttribute('text-anchor', 'middle');
     label.setAttribute('class', 'lane-label');
     label.setAttribute('data-lane-label', i);
@@ -1634,7 +1665,7 @@ function buildStaticSvg() {
     const badge = document.createElementNS(SVG_NS, 'g');
     badge.setAttribute('class', 'exodus-badge');
     badge.setAttribute('data-exodus-badge', i);
-    badge.setAttribute('transform', `translate(${x + laneWidth - 78}, 149)`);
+    badge.setAttribute('transform', `translate(${x + laneWidth - 78}, 167)`);
 
     const badgeBox = document.createElementNS(SVG_NS, 'rect');
     badgeBox.setAttribute('class', 'exodus-badge-box');
@@ -1695,7 +1726,7 @@ function buildStaticSvg() {
 
     const label = document.createElementNS(SVG_NS, 'text');
     label.setAttribute('x', manager.x);
-    label.setAttribute('y', TIER_Y[5] + 66);
+    label.setAttribute('y', TIER_Y[5] + 54);
     label.setAttribute('class', 'cluster-label');
     label.setAttribute('data-cluster-label-for', manager.id);
     label.textContent = '4 ICs';
@@ -1925,7 +1956,7 @@ function resistanceProtection(node, parent) {
   const counterweights = getEffectiveCounterweightsRatio();
   const operatingPressure = STATE.controls.operatingPressure / 100;
 
-  // Moral people are more able to remain resistant when the system gives them cover:
+  // Grounded people are more able to remain resistant when the system gives them cover:
   // transparency, anti-retaliation, worker voice, consequences, etc.
   const systemCover = counterweights * 0.16 - operatingPressure * 0.06;
   return hostile ? 0.24 + systemCover : 0.14 + systemCover;
@@ -2119,7 +2150,7 @@ function resolveTurnoverReplacement(node, parent, months) {
     counterweights * 0.10 +
     timeline * 0.03;
 
-  // Resistant/clean replacement remains common in healthier systems.
+  // Grounded/neutral replacement remains common in healthier systems.
   let resistantChance =
     0.38 +
     counterweights * 0.30 -
@@ -2224,7 +2255,7 @@ function computeOneMonthStep(months) {
 
       const parent = NODE_MAP.get(node.parentId);
 
-      // Shielding is an occupant-level stance. Once a clean manager starts shielding,
+      // Shielding is an occupant-level stance. Once a neutral manager starts shielding,
       // it persists until that manager is fired, turns over, or is manually/forcibly changed.
       if (node.level === 4 && prior === 'N') {
         activateManagerShielding(node, months);
@@ -2245,7 +2276,7 @@ function computeOneMonthStep(months) {
         continue;
       }
 
-      // Firing: hostile managers sometimes actively remove resistant people.
+      // Firing: hostile managers sometimes actively remove grounded people.
       if (computeFiringType(node, parent, months)) {
         replaceOccupant(node, months);
         const replacementType = resolveTurnoverReplacement(node, parent, months);
@@ -2268,7 +2299,7 @@ function computeOneMonthStep(months) {
       }
 
       // Active shielding managers do not silently become captured in the same month.
-      // They remain clean unless a visible firing/turnover/manual event removes them.
+      // They remain neutral unless a visible firing/turnover/manual event removes them.
       if (node.level === 4 && getShieldingManager(node)) {
         node.currentType = 'N';
         continue;
@@ -2288,7 +2319,7 @@ function computeAllNodeTypes() {
   const target = Number(STATE.timeMonths) || 0;
   resetRuntimeState();
 
-  // Sequential/cumulative simulation, month by month, always from a clean month-zero baseline.
+  // Sequential/cumulative simulation, month by month, always from a neutral month-zero baseline.
   for (const months of SIM_MONTHS) {
     if (months > target) break;
     STATE.timeMonths = months;
@@ -2297,6 +2328,10 @@ function computeAllNodeTypes() {
     for (let lane = 0; lane < 5; lane++) {
       if (STATE.exodusTriggeredMonths[lane] == null && getBranchMetrics(lane).exodusTriggered) {
         STATE.exodusTriggeredMonths[lane] = months;
+        STATE.exodusFlashNodes[months] = [
+          ...(STATE.exodusFlashNodes[months] || []),
+          ...getExodusFlashNodeIds(lane, months)
+        ];
       }
     }
 
@@ -2316,7 +2351,7 @@ function renderNode(node) {
   const baseClass = node.special
     ? 'node leader special-node'
     : node.level === 5 ? 'node ic-dot' : 'node leader';
-  const resistorClass = !node.special && type === 'N' && isMoralResistor(node) ? ' moral-resistor' : '';
+  const resistorClass = !node.special && type === 'N' && isMoralResistor(node) ? ' grounded-individual' : '';
 
   const fills = {
     T: '#C73E2E',
@@ -2333,19 +2368,30 @@ function renderNode(node) {
   for (const el of elements) {
     // Full replace on every matching SVG element. querySelector() only repainted
     // the first match; duplicate ghosts can survive hot reload / interrupted init.
-    el.classList.remove('node-T', 'node-I', 'node-N', 'moral-resistor', 'turnover-flash', 'fire-flash', 'focus-node');
+    el.classList.remove('node-T', 'node-I', 'node-N', 'moral-resistor', 'grounded-individual', 'turnover-flash', 'fire-flash', 'focus-node');
+    const isGrounded = Boolean(resistorClass);
     el.setAttribute('class', `${baseClass} node-${type}${resistorClass}`);
     el.setAttribute('fill', fills[type]);
-    el.setAttribute('stroke', strokes[type]);
+    el.setAttribute('stroke', isGrounded ? '#4BAFA9' : strokes[type]);
     el.style.removeProperty('fill');
     el.style.removeProperty('stroke');
+    el.style.removeProperty('stroke-width');
+    el.style.removeProperty('filter');
+
+    if (isGrounded) {
+      // Force the grounded color at the element level. This prevents SVG <use>
+      // inheritance / animation cleanup from leaving a thick neutral-gray outline.
+      el.style.setProperty('stroke', 'var(--grounded)', 'important');
+      el.style.setProperty('stroke-width', '2.6', 'important');
+      el.style.setProperty('filter', 'drop-shadow(0 0 2px rgba(75, 175, 169, 0.34))');
+    }
 
     const firedThisMonth = node.firingEvents && node.firingEvents.some(evt => evt.months === STATE.timeMonths);
     const turnoverThisMonth = node.turnoverEvents && node.turnoverEvents.some(evt => evt.months === STATE.timeMonths);
 
     // Reconciliation does a hard repaint, so flash classes are applied after
     // base classes and attributes. requestAnimationFrame gives the browser a
-    // clean frame boundary, which makes SVG animations reliably restart.
+    // neutral frame boundary, which makes SVG animations reliably restart.
     el.classList.remove('turnover-flash', 'fire-flash');
     if (firedThisMonth || turnoverThisMonth) {
       void el.getBoundingClientRect();
@@ -2368,7 +2414,7 @@ function renderNode(node) {
         `${node.turnoverEvents && node.turnoverEvents.length ? `\nTurnover events: ${node.turnoverEvents.length}` : ''}` +
         `${node.firingEvents && node.firingEvents.length ? `\nFiring events: ${node.firingEvents.length}` : ''}` +
         `${node.level === 4 && getShieldingManager(node) ? `\nManager is actively shielding ICs` : ''}` +
-        `${!node.special && isMoralResistor(node) ? `\nCurrent occupant: high moral/empathy resistance` : ''}` +
+        `${!node.special && isMoralResistor(node) ? `\nCurrent occupant: grounded / high-integrity resistance` : ''}` +
         `${node.id === OVERSIGHT_NODE_ID ? `\nEffective counterweights: ${getEffectiveCounterweights()} / 100` : ''}` +
         `${node.id === BOARD_NODE_ID ? `\nThis node can police or fail to police oversight.` : ''}`;
     }
@@ -2380,7 +2426,7 @@ function renderNode(node) {
   const specialLabel = document.querySelector(`[data-special-label-for="${node.id}"]`);
   if (specialLabel) {
     specialLabel.classList.toggle('compromised', type === 'T' || type === 'I');
-    specialLabel.textContent = `${node.roleName || 'Board / External Regulator'} · ${type === 'T' ? 'trait-led' : type === 'I' ? 'captured' : 'clean'}`;
+    specialLabel.textContent = `${node.roleName || 'Board / External Regulator'} · ${type === 'T' ? 'trait-led' : type === 'I' ? 'captured' : 'neutral'}`;
   }
 
   if (node.level === 4) renderManagerCluster(node);
@@ -2446,14 +2492,14 @@ function updateUiText() {
   const oversight = getOversightNode();
   const board = getBoardNode();
   const effectiveCounterweights = getEffectiveCounterweights();
-  const oversightState = oversight ? (oversight.currentType === 'T' ? 'trait-led' : oversight.currentType === 'I' ? 'captured' : 'clean') : 'n/a';
-  const boardState = board ? (board.currentType === 'T' ? 'trait-led' : board.currentType === 'I' ? 'captured' : 'clean') : 'n/a';
+  const oversightState = oversight ? (oversight.currentType === 'T' ? 'trait-led' : oversight.currentType === 'I' ? 'captured' : 'neutral') : 'n/a';
+  const boardState = board ? (board.currentType === 'T' ? 'trait-led' : board.currentType === 'I' ? 'captured' : 'neutral') : 'n/a';
 
   document.getElementById('status-line').innerHTML =
-    `${STATE.customMode ? '<strong>Custom Placement</strong> · Click nodes to set red/purple/clean · ' : `<strong>${scenario.name}</strong> · `}Run ${STATE.runSeed} · ${timeText} · Leadership DT ${STATE.controls.darkTriad}% · People/Legal/Compliance ${oversightState} · Board ${boardState} · Effective counterweights ${effectiveCounterweights}/100 · 246 people`;
+    `${STATE.customMode ? '<strong>Custom Placement</strong> · Click nodes to set red/purple/neutral · ' : `<strong>${scenario.name}</strong> · `}Run ${STATE.runSeed} · ${timeText} · Leadership DT ${STATE.controls.darkTriad}% · People/Legal/Compliance ${oversightState} · Board ${boardState} · Effective counterweights ${effectiveCounterweights}/100 · 246 people`;
 
   document.getElementById('counts-line').textContent =
-    `Dark Triad ${counts.T} · Influenced ${counts.I} · Clean/resistant ${counts.N} · Turnover events ${getTurnoverEventCount()} · Firings ${getFiringEventCount()} · Exodus branches ${getExodusBranchCount()}${effectiveCounterweights === 0 ? ' · Accountability collapsed' : effectiveCounterweights < STATE.controls.counterweights ? ' · Accountability severely degraded' : ''}`;
+    `Dark Triad ${counts.T} · Influenced ${counts.I} · Neutral / grounded ${counts.N} · Turnover events ${getTurnoverEventCount()} · Firings ${getFiringEventCount()} · Exodus branches ${getExodusBranchCount()}${effectiveCounterweights === 0 ? ' · Accountability collapsed' : effectiveCounterweights < STATE.controls.counterweights ? ' · Accountability severely degraded' : ''}`;
 
   document.getElementById('timeMonths').value = STATE.timeMonths;
   document.getElementById('timeMonths-val').textContent = timeText;
@@ -2465,11 +2511,11 @@ function updateUiText() {
   } else if (STATE.timeMonths <= 12) {
     note.textContent = 'Months 1–12: executive signaling and harmful doctrine begin shaping branch behavior. If People / Legal / Compliance is captured, effective accountability is crushed but not erased. If the board is compromised too, then it effectively bottoms out.';
   } else if (STATE.timeMonths <= 24) {
-    note.textContent = 'Year 1–2: directors begin selecting managers who fit the local culture. Some clean managers actively shield their four ICs from a hostile director. Shielding now persists until that manager is fired, turns over, or is manually changed — and it raises the manager’s own risk.';
+    note.textContent = 'Year 1–2: directors begin selecting managers who fit the local culture. Some neutral managers actively shield their four ICs from a hostile director. Shielding now persists until that manager is fired, turns over, or is manually changed — and it raises the manager’s own risk.';
   } else if (STATE.timeMonths <= 36) {
-    note.textContent = 'Year 2–3: hiring, promotion, and turnover begin changing who remains. Toxic branches now build exodus pressure gradually; once it gets high enough, clean people start leaving in waves instead of tripping a cartoon cliff.';
+    note.textContent = 'Year 2–3: hiring, promotion, and turnover begin changing who remains. Toxic branches now build exodus pressure gradually; once it gets high enough, neutral people start leaving in waves instead of tripping a cartoon cliff.';
   } else {
-    note.textContent = 'Years 3–5: turnover compounds, exodus pressure can hollow out toxic branches, clean managers can still shield pockets of ICs, and captured oversight degrades accountability while red flashes mark direct firings.';
+    note.textContent = 'Years 3–5: turnover compounds, exodus pressure can hollow out toxic branches, neutral managers can still shield pockets of ICs, and captured oversight degrades accountability while red flashes mark direct firings.';
   }
 
   updateInputHeat();
@@ -2514,7 +2560,7 @@ function stopPlayback() {
   }
 
   const btn = document.getElementById('play-simulation');
-  btn.textContent = 'Play 60-month simulation';
+  btn.textContent = '▶';
   btn.classList.remove('playing');
 }
 
@@ -2571,7 +2617,7 @@ function playSimulation() {
   }
 
   const btn = document.getElementById('play-simulation');
-  btn.textContent = 'Stop cinematic simulation';
+  btn.textContent = '⏸';
   btn.classList.add('playing');
 
   // Playback must not reroll, reset to month 0, or repaint the current month on click.
@@ -2696,7 +2742,7 @@ function focusSubtree(rootId) {
       `State: ${TYPE_NAMES[root.currentType]}
 ` +
       `People / Legal / Compliance: ${getOversightNode() ? TYPE_NAMES[getOversightNode().currentType] : 'n/a'}\n\n` +
-      `${isBoardCompromised() ? 'Compromised board oversight stops policing the policing.' : 'A clean board can pressure the oversight branch back toward clean behavior.'}`
+      `${isBoardCompromised() ? 'Compromised board oversight stops policing the policing.' : 'A neutral board can pressure the oversight branch back toward clean behavior.'}`
     );
     return;
   }
@@ -2756,8 +2802,8 @@ function focusSubtree(rootId) {
 ` +
     `Turnover events: ${getTurnoverEventCount(ids)}\n` +
     `Firing events: ${getFiringEventCount(ids)}\n` +
-    `Clean/resistant: ${counts.N}\n` +
-    `Resistant occupants: ${resistantPockets}
+    `Neutral / grounded: ${counts.N}\n` +
+    `Grounded occupants: ${resistantPockets}
 ` +
     `Shielded teams: ${shieldedTeams}
 ` +
@@ -2796,7 +2842,7 @@ function hardResetVisualState() {
   clearFocus();
   document.querySelectorAll('.turnover-flash').forEach(el => el.classList.remove('turnover-flash'));
   document.querySelectorAll('.fire-flash').forEach(el => el.classList.remove('fire-flash'));
-  document.querySelectorAll('.node-T, .node-I, .node-N').forEach(el => el.classList.remove('node-T', 'node-I', 'node-N', 'moral-resistor', 'focus-node'));
+  document.querySelectorAll('.node-T, .node-I, .node-N').forEach(el => el.classList.remove('node-T', 'node-I', 'node-N', 'moral-resistor', 'grounded-individual', 'focus-node'));
   document.querySelectorAll('[data-id]').forEach(el => {
     const level = Number(el.getAttribute('data-level'));
     const isSpecial = el.classList.contains('special-node');
@@ -2806,6 +2852,8 @@ function hardResetVisualState() {
     el.setAttribute('stroke', '#7A7264');
     el.style.fill = 'none';
     el.style.stroke = '#7A7264';
+    el.style.removeProperty('stroke-width');
+    el.style.removeProperty('filter');
   });
   document.querySelectorAll('[data-cluster-for]').forEach(el => el.classList.remove('shielded-cluster', 'focus-cluster'));
   document.querySelectorAll('[data-cluster-label-for]').forEach(el => {
@@ -2856,12 +2904,28 @@ function bindInputTooltips() {
       '<strong>Estimated Dark Triad concentration in leadership.</strong> This controls the assumed rate of narcissism, Machiavellianism, and psychopathy in senior leadership. 4% is the reference point; 20% represents a suspected high-risk environment. Setting it to 0% is a sandbox test, not a realistic population claim. The broad workforce baseline remains about 1% unless this is set to 0%.'
     ],
     operatingPressure: [
-      'Operating Pressure + Selection',
+      'Operating Pressure',
       '<strong>Doctrine, incentives, hiring, and promotion pressure.</strong> This combines the company’s excuse system with what it actually rewards. Low means stakeholder norms, balanced rewards, and real concern for harm. High means ends-justify-means doctrine, financial extraction pressure, promotions for hard-charging behavior, selection for loyal/aligned replacements, and weak concern for turnover, retaliation, or quality damage.'
     ],
     counterweights: [
       'Accountability / Counterweights',
       '<strong>The system’s immune response.</strong> This combines oversight, transparency, worker voice, anti-retaliation protection, ethics enforcement, board pressure, and real consequences. High counterweights do not erase Dark Triad traits, but they make them harder to scale, hide, and reward. If the People / Legal / Compliance branch is captured or trait-led, this slider’s effective value is heavily reduced. If both the oversight branch and Board / External Regulator are compromised, it collapses to effectively zero.'
+    ],
+    darkTriadState: [
+      'Dark Triad',
+      '<strong>Red fill marks a trait-led node.</strong> In the model, this means the current occupant is a Dark Triad carrier: relatively higher in narcissistic, Machiavellian, or psychopathic tendencies, and more likely to exploit power, normalize harm, and shape the system around them.'
+    ],
+    capturedBehavior: [
+      'Captured Behavior',
+      '<strong>Purple fill marks behavioral capture.</strong> These people are not necessarily Dark Triad personalities themselves. They have adapted to the local system — through fear, incentives, mimicry, self-protection, or status alignment — and are now reinforcing the toxic culture.'
+    ],
+    neutral: [
+      'Neutral',
+      '<strong>A neutral individual is not currently trait-led or behaviorally captured.</strong> They are the baseline state in the model. Some neutral people stay pliable under pressure; others may later reveal as more grounded and resistant.'
+    ],
+    grounded: [
+      'Grounded Individual',
+      '<strong>A grounded individual is internally anchored under pressure.</strong> In the model, this means they are harder to capture, coerce, flatter, intimidate, or filter into toxic alignment. They are also more likely to act as a stabilizing buffer — especially as managers, where grounded people are more likely to shield the team below them. They are not “perfect” or heroic; they are simply less permeable to Dark Triad normalization.'
     ]
   };
 
