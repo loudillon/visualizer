@@ -884,7 +884,7 @@
           <div class="legend-item has-help" data-help="capturedBehavior"><span class="dot dot-I"></span><span><strong>Captured behavior</strong></span></div>
           <div class="legend-item has-help" data-help="neutral"><span class="dot dot-N"></span><span><strong>Neutral</strong></span></div>
           <div class="legend-item has-help" data-help="grounded"><span class="dot dot-R"></span><span><strong>Grounded individual</strong></span></div>
-          <div class="legend-item"><span class="dot dot-S"></span><span><strong>Teal lines</strong> = grounded manager shielding direct reports</span></div>
+          <div class="legend-item"><span class="dot dot-S"></span><span><strong>Teal lines</strong> = grounded leader shielding direct reports</span></div>
           <div class="legend-item"><span class="dot dot-O"></span><span><strong>Yellow flash</strong> = turnover</span></div>
           <div class="legend-item"><span class="dot dot-F"></span><span><strong>Dark red flash</strong> = firing</span></div>
           <div class="legend-item"><span class="dot dot-X"></span><span><strong>Exodus badge</strong> = branch under exodus pressure</span></div>
@@ -1281,11 +1281,11 @@ function isExodusFlashNode(node, months = STATE.timeMonths) {
   return Boolean(ids && ids.includes(node.id));
 }
 
-function canManagerStartShielding(manager, months = STATE.timeMonths) {
-  if (!manager || manager.level !== 4 || manager.currentType !== 'N') return false;
-  if (!isMoralResistor(manager)) return false;
-  const director = manager.parentId ? NODE_MAP.get(manager.parentId) : null;
-  if (!director || (director.currentType !== 'T' && director.currentType !== 'I')) return false;
+function canLeaderStartShielding(leader, months = STATE.timeMonths) {
+  if (!leader || leader.level < 2 || leader.level > 4 || leader.currentType !== 'N') return false;
+  if (!isMoralResistor(leader)) return false;
+  const boss = leader.parentId ? NODE_MAP.get(leader.parentId) : null;
+  if (!boss || (boss.currentType !== 'T' && boss.currentType !== 'I')) return false;
 
   const effectiveCounterweights = getEffectiveCounterweightsRatio();
   const operatingPressure = STATE.controls.operatingPressure / 100;
@@ -1297,53 +1297,56 @@ function canManagerStartShielding(manager, months = STATE.timeMonths) {
     operatingPressure * 0.18;
 
   chance = Math.max(0.18, Math.min(0.92, chance));
-  return runRandom(manager.occupantSeed, 732 + months) < chance;
+  return runRandom(leader.occupantSeed, 732 + months) < chance;
 }
 
-function activateManagerShielding(manager, months) {
-  if (!manager || manager.level !== 4 || manager.currentType !== 'N') return false;
+function activateLeaderShielding(leader, months) {
+  if (!leader || leader.level < 2 || leader.level > 4 || leader.currentType !== 'N') return false;
 
-  if (manager.shieldingActive && manager.shieldingSeed === manager.occupantSeed) {
+  if (leader.shieldingActive && leader.shieldingSeed === leader.occupantSeed) {
     return true;
   }
 
-  if (!canManagerStartShielding(manager, months)) return false;
+  if (!canLeaderStartShielding(leader, months)) return false;
 
-  manager.shieldingActive = true;
-  manager.shieldingSeed = manager.occupantSeed;
-  manager.shieldingStartedMonth = months;
+  leader.shieldingActive = true;
+  leader.shieldingSeed = leader.occupantSeed;
+  leader.shieldingStartedMonth = months;
   return true;
 }
 
-function getShieldingManager(manager) {
-  if (!manager || manager.level !== 4 || manager.currentType !== 'N') return false;
-  if (!isMoralResistor(manager)) return false;
-  if (!manager.shieldingActive || manager.shieldingSeed !== manager.occupantSeed) return false;
+function getShieldingLeader(leader) {
+  if (!leader || leader.level < 2 || leader.level > 4 || leader.currentType !== 'N') return false;
+  if (!isMoralResistor(leader)) return false;
+  if (!leader.shieldingActive || leader.shieldingSeed !== leader.occupantSeed) return false;
 
-  const director = manager.parentId ? NODE_MAP.get(manager.parentId) : null;
-  return Boolean(director && (director.currentType === 'T' || director.currentType === 'I'));
+  const boss = leader.parentId ? NODE_MAP.get(leader.parentId) : null;
+  return Boolean(boss && (boss.currentType === 'T' || boss.currentType === 'I'));
 }
 
-function isShieldingManagerAtRisk(manager) {
-  if (!manager || manager.level !== 4) return false;
-  return getShieldingManager(manager);
+function isShieldingLeaderAtRisk(leader) {
+  if (!leader || leader.level < 2 || leader.level > 4) return false;
+  return getShieldingLeader(leader);
 }
 
-function renderManagerCluster(manager) {
-  if (!manager || manager.level !== 4) return;
-  const cluster = document.querySelector(`[data-cluster-for="${manager.id}"]`);
-  const label = document.querySelector(`[data-cluster-label-for="${manager.id}"]`);
-  const shielded = getShieldingManager(manager);
+function renderShieldingLeader(leader) {
+  if (!leader || leader.level < 2 || leader.level > 4) return;
+  const cluster = document.querySelector(`[data-cluster-for="${leader.id}"]`);
+  const label = document.querySelector(`[data-cluster-label-for="${leader.id}"]`);
+  const shielded = getShieldingLeader(leader);
   if (cluster) cluster.classList.remove('shielded-cluster');
   if (label) {
     label.classList.remove('shielded-label');
     label.textContent = '4 ICs';
   }
 
-  document.querySelectorAll(`[data-parent="${manager.id}"]`).forEach(edge => {
+  document.querySelectorAll(`[data-parent="${leader.id}"]`).forEach(edge => {
     edge.classList.toggle('shielded-edge', shielded);
   });
 }
+
+const getShieldingManager = getShieldingLeader;
+const isShieldingManagerAtRisk = isShieldingLeaderAtRisk;
 
 function computeBoardType(months) {
   const node = getBoardNode();
@@ -1991,7 +1994,7 @@ function computeInfluenceType(node, parent) {
   const moralProtection = resistanceProtection(node, parent);
 
   const grandparent = parent && parent.parentId ? NODE_MAP.get(parent.parentId) : null;
-  const shielding = node.level === 5 && parent && parent.level === 4 ? getShieldingManager(parent) : false;
+  const shielding = parent ? getShieldingLeader(parent) : false;
   const groundedParent = parent && parent.currentType === 'N' && isMoralResistor(parent);
   const groundedParentProtection = groundedParent ? Math.max(0, 0.14 + counterweights * 0.12 - operatingPressure * 0.05) : 0;
 
@@ -2013,8 +2016,8 @@ function computeInfluenceType(node, parent) {
 
   let directorSpillover = 0;
   if (
-    node.level === 5 &&
-    parent && parent.level === 4 && parent.currentType === 'N' &&
+    node.level >= 3 &&
+    parent && parent.currentType === 'N' &&
     grandparent && (grandparent.currentType === 'T' || grandparent.currentType === 'I')
   ) {
     directorSpillover = 0.08 + operatingPressure * 0.08 - counterweights * 0.05;
@@ -2080,8 +2083,8 @@ function computeTurnoverType(node, parent, months) {
   const counterweights = getEffectiveCounterweightsRatio();
   const individualResistance = runRandom(node.occupantSeed, 62);
   const moralProtection = resistanceProtection(node, parent);
-  const shielding = node.level === 5 && parent && parent.level === 4 ? getShieldingManager(parent) : false;
-  const shieldingManagerRisk = node.level === 4 && isShieldingManagerAtRisk(node);
+  const shielding = parent ? getShieldingLeader(parent) : false;
+  const shieldingManagerRisk = isShieldingLeaderAtRisk(node);
   const branchMetrics = node.lane !== null ? getBranchMetrics(node.lane) : null;
   const tenureRamp = Math.min(1, Math.max(0, months - 6) / 24);
 
@@ -2113,8 +2116,7 @@ function computeFiringType(node, parent, months) {
   const groundedBoss = parentType === 'N' && isMoralResistor(parent);
   const grandparent = parent && parent.parentId ? NODE_MAP.get(parent.parentId) : null;
   const indirectHostility =
-    node.level === 5 &&
-    parent.level === 4 &&
+    node.level >= 3 &&
     parentType === 'N' &&
     grandparent &&
     (grandparent.currentType === 'T' || grandparent.currentType === 'I');
@@ -2127,12 +2129,12 @@ function computeFiringType(node, parent, months) {
   const counterweights = getEffectiveCounterweightsRatio();
   const branchMetrics = node.lane !== null ? getBranchMetrics(node.lane) : null;
   const moralProtection = resistanceProtection(node, parent);
-  const shieldingManagerRisk = node.level === 4 && isShieldingManagerAtRisk(node);
-  const shielding = node.level === 5 && parent && parent.level === 4 ? getShieldingManager(parent) : false;
+  const shieldingManagerRisk = isShieldingLeaderAtRisk(node);
+  const shielding = parent ? getShieldingLeader(parent) : false;
   const groundedPair = groundedBoss && node.currentType === 'N' && isMoralResistor(node);
   const tenureRamp = Math.min(1, Math.max(0, months - 6) / 30);
 
-  // Grounded managers with real organizational cover are more able to remove
+  // Grounded leaders with real organizational cover are more able to remove
   // trait-led direct reports; hostile bosses mostly remove resistant people.
   let chance = groundedBossRemovingTrait ? 0.006 : hostileBoss ? 0.0015 : 0.0010;
   chance += parentType === 'T' ? 0.0045 : parentType === 'I' ? 0.0025 : 0;
@@ -2285,10 +2287,10 @@ function computeOneMonthStep(months) {
 
       const parent = NODE_MAP.get(node.parentId);
 
-      // Shielding is an occupant-level stance. Only grounded neutral managers can start shielding;
-      // it persists until that manager is fired, turns over, or is manually/forcibly changed.
-      if (node.level === 4 && prior === 'N') {
-        activateManagerShielding(node, months);
+      // Shielding is an occupant-level stance. Only grounded neutral leaders can start shielding;
+      // it persists until that leader is fired, turns over, or is manually/forcibly changed.
+      if (node.level >= 2 && node.level <= 4 && prior === 'N') {
+        activateLeaderShielding(node, months);
       }
 
       // Captured behavior tends to persist. Under strong *effective* accountability,
@@ -2306,7 +2308,7 @@ function computeOneMonthStep(months) {
         continue;
       }
 
-      // Firing: hostile managers sometimes remove grounded people; grounded managers
+      // Firing: hostile leaders sometimes remove grounded people; grounded leaders
       // with enough cover can remove trait-led direct reports.
       if (computeFiringType(node, parent, months)) {
         const firedWasGrounded = node.currentType === 'N' && isMoralResistor(node);
@@ -2331,9 +2333,9 @@ function computeOneMonthStep(months) {
         continue;
       }
 
-      // Active shielding managers do not silently become captured in the same month.
+      // Active shielding leaders do not silently become captured in the same month.
       // They remain neutral unless a visible firing/turnover/manual event removes them.
-      if (node.level === 4 && getShieldingManager(node)) {
+      if (getShieldingLeader(node)) {
         node.currentType = 'N';
         continue;
       }
@@ -2454,7 +2456,7 @@ function renderNode(node) {
         `${parent ? `\nParent: ${TYPE_NAMES[parent.currentType]}` : ''}` +
         `${node.turnoverEvents && node.turnoverEvents.length ? `\nTurnover events: ${node.turnoverEvents.length}` : ''}` +
         `${node.firingEvents && node.firingEvents.length ? `\nFiring events: ${node.firingEvents.length}` : ''}` +
-        `${node.level === 4 && getShieldingManager(node) ? `\nManager is actively shielding ICs` : ''}` +
+        `${getShieldingLeader(node) ? `\nLeader is actively shielding direct reports` : ''}` +
         `${!node.special && isMoralResistor(node) ? `\nCurrent occupant: grounded / high-integrity resistance` : ''}` +
         `${node.id === OVERSIGHT_NODE_ID ? `\nEffective counterweights: ${getEffectiveCounterweights()} / 100` : ''}` +
         `${node.id === BOARD_NODE_ID ? `\nThis node can police or fail to police oversight.` : ''}`;
@@ -2470,7 +2472,7 @@ function renderNode(node) {
     specialLabel.textContent = `${node.roleName || 'Board / External Regulator'} · ${type === 'T' ? 'trait-led' : type === 'I' ? 'captured' : 'neutral'}`;
   }
 
-  if (node.level === 4) renderManagerCluster(node);
+  if (node.level >= 2 && node.level <= 4) renderShieldingLeader(node);
 }
 
 function reconcileSvgToModel() {
@@ -2552,11 +2554,11 @@ function updateUiText() {
   } else if (STATE.timeMonths <= 12) {
     note.textContent = 'Months 1–12: executive signaling and harmful doctrine begin shaping branch behavior. If People / Legal / Compliance is captured, effective accountability is crushed but not erased. If the board is compromised too, then it effectively bottoms out.';
   } else if (STATE.timeMonths <= 24) {
-    note.textContent = 'Year 1-2: directors begin selecting managers who fit the local culture. Grounded neutral managers under hostile directors attempt to shield their four ICs; counterweights make that easier, operating pressure makes it harder. Shielding persists until that manager is fired, turns over, or is manually changed - and it raises the manager’s own risk.';
+    note.textContent = 'Year 1-2: leaders begin selecting reports who fit the local culture. Grounded neutral VPs, directors, and managers under hostile bosses attempt to shield their direct reports; counterweights make that easier, operating pressure makes it harder. Shielding persists until that leader is fired, turns over, or is manually changed - and it raises their own risk.';
   } else if (STATE.timeMonths <= 36) {
     note.textContent = 'Year 2–3: hiring, promotion, and turnover begin changing who remains. Toxic branches now build exodus pressure gradually; once it gets high enough, neutral people start leaving in waves instead of tripping a cartoon cliff.';
   } else {
-    note.textContent = 'Years 3-5: turnover compounds, exodus pressure can hollow out toxic branches, grounded managers can shield teams, reduce capture below them, and remove trait-led direct reports when the system gives them cover.';
+    note.textContent = 'Years 3-5: turnover compounds, exodus pressure can hollow out toxic branches, grounded leaders can shield teams, reduce capture below them, and remove trait-led direct reports when the system gives them cover.';
   }
 
   updateInputHeat();
@@ -2829,7 +2831,7 @@ function focusSubtree(rootId) {
   });
 
   const resistantPockets = branchNodes.filter(n => !n.special && n.currentType === 'N' && isMoralResistor(n)).length;
-  const shieldedTeams = branchNodes.filter(n => n.level === 4 && getShieldingManager(n)).length;
+  const shieldedLeaders = branchNodes.filter(n => n.level >= 2 && n.level <= 4 && getShieldingLeader(n)).length;
   const risk = Math.round(((counts.T * 1.15 + counts.I * 0.72) / Math.max(1, branchNodes.filter(n => !n.special).length)) * 100);
   const branchMetrics = root && root.lane !== null ? getBranchMetrics(root.lane) : null;
 
@@ -2847,7 +2849,7 @@ function focusSubtree(rootId) {
     `Neutral / grounded: ${counts.N}\n` +
     `Grounded occupants: ${resistantPockets}
 ` +
-    `Shielded teams: ${shieldedTeams}
+    `Shielding leaders: ${shieldedLeaders}
 ` +
     `${branchMetrics ? `Exodus pressure: ${Math.round(branchMetrics.exodusPressure * 100)}%${branchMetrics.exodusTriggered ? ' · triggered' : ''}\n` : ''}\n` +
     `Branch risk: ${risk >= 65 ? 'Severe' : risk >= 40 ? 'Elevated' : risk >= 20 ? 'Moderate' : 'Contained'}`
@@ -2970,7 +2972,7 @@ function bindInputTooltips() {
     ],
     grounded: [
       'Grounded Individual',
-      '<strong>A grounded individual is internally anchored under pressure.</strong> In the model, this means they are harder to capture, coerce, flatter, intimidate, or filter into toxic alignment. As managers, they lower capture risk below them, can shield teams under hostile directors, and are more likely to remove trait-led direct reports when counterweights give them cover. They are not “perfect” or heroic; they are simply less permeable to Dark Triad normalization.'
+      '<strong>A grounded individual is internally anchored under pressure.</strong> In the model, this means they are harder to capture, coerce, flatter, intimidate, or filter into toxic alignment. As VPs, directors, or managers, they lower capture risk below them, can shield direct reports under hostile bosses, and are more likely to remove trait-led direct reports when counterweights give them cover. They are not “perfect” or heroic; they are simply less permeable to Dark Triad normalization.'
     ]
   };
 
