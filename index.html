@@ -2309,12 +2309,13 @@ function computeOneMonthStep(months) {
       // Firing: hostile managers sometimes remove grounded people; grounded managers
       // with enough cover can remove trait-led direct reports.
       if (computeFiringType(node, parent, months)) {
+        const firedWasGrounded = node.currentType === 'N' && isMoralResistor(node);
         replaceOccupant(node, months);
         const replacementType = resolveTurnoverReplacement(node, parent, months);
         node.currentType = replacementType;
         node.turnovered = true;
         node.fired = true;
-        node.firingEvents.push({ months, replacementType });
+        node.firingEvents.push({ months, replacementType, firedWasGrounded });
         continue;
       }
 
@@ -2378,11 +2379,14 @@ function renderNode(node) {
   const type = node.currentType;
   const elements = Array.from(document.querySelectorAll(`[data-id="${node.id}"]`));
   if (!elements.length) return;
+  const firedEventThisMonth = node.firingEvents && node.firingEvents.find(evt => evt.months === STATE.timeMonths);
+  const turnoverThisMonth = node.turnoverEvents && node.turnoverEvents.some(evt => evt.months === STATE.timeMonths);
+  const suppressGroundedDuringFiring = Boolean(firedEventThisMonth && firedEventThisMonth.firedWasGrounded);
 
   const baseClass = node.special
     ? 'node leader special-node'
     : node.level === 5 ? 'node ic-dot' : 'node leader';
-  const resistorClass = !node.special && type === 'N' && isMoralResistor(node) ? ' grounded-individual' : '';
+  const resistorClass = !node.special && type === 'N' && isMoralResistor(node) && !suppressGroundedDuringFiring ? ' grounded-individual' : '';
 
   const fills = {
     T: '#C73E2E',
@@ -2417,17 +2421,14 @@ function renderNode(node) {
       el.style.setProperty('filter', 'drop-shadow(0 0 2px rgba(75, 175, 169, 0.34))');
     }
 
-    const firedThisMonth = node.firingEvents && node.firingEvents.some(evt => evt.months === STATE.timeMonths);
-    const turnoverThisMonth = node.turnoverEvents && node.turnoverEvents.some(evt => evt.months === STATE.timeMonths);
-
     // Reconciliation does a hard repaint, so flash classes are applied after
     // base classes and attributes. requestAnimationFrame gives the browser a
     // neutral frame boundary, which makes SVG animations reliably restart.
     el.classList.remove('turnover-flash', 'fire-flash');
-    if (firedThisMonth || turnoverThisMonth) {
+    if (firedEventThisMonth || turnoverThisMonth) {
       void el.getBoundingClientRect();
       requestAnimationFrame(() => {
-        if (firedThisMonth) {
+        if (firedEventThisMonth) {
           el.classList.add('fire-flash');
         } else if (turnoverThisMonth) {
           el.classList.add('turnover-flash');
