@@ -1874,8 +1874,8 @@ function getMobileNodePosition(node) {
     return left + (index / (count - 1)) * (right - left);
   };
   const branchTop = lane => 76 + lane * 116;
-  const branchLeft = 58;
-  const branchRight = 362;
+  const branchLeft = 36;
+  const branchRight = 354;
   const managerOffsets = [-32, 0, 32];
   const icOffsets = [-10.5, -3.5, 3.5, 10.5];
 
@@ -1924,13 +1924,14 @@ function buildMobileSvg() {
   if (!guides || !edges || !nodes) return;
 
   [
-    ['CEO', 34],
-    ['BRANCHES', 84]
-  ].forEach(([label, y]) => {
+    ['CEO', 34, 195, 'middle'],
+    ['BRANCHES', 84, 10, 'start']
+  ].forEach(([label, y, x, anchor]) => {
     const text = document.createElementNS(SVG_NS, 'text');
     text.setAttribute('class', 'mobile-level-label');
-    text.setAttribute('x', 10);
+    text.setAttribute('x', x);
     text.setAttribute('y', y + 3);
+    text.setAttribute('text-anchor', anchor);
     text.textContent = label;
     guides.appendChild(text);
   });
@@ -1940,7 +1941,7 @@ function buildMobileSvg() {
     const pos = getMobileNodePosition(vp);
     const label = document.createElementNS(SVG_NS, 'text');
     label.setAttribute('class', 'mobile-branch-label');
-    label.setAttribute('x', 92);
+    label.setAttribute('x', pos.x + 13);
     label.setAttribute('y', pos.y + 3);
     label.setAttribute('text-anchor', 'start');
     label.textContent = DEPARTMENT_NAMES[lane].split(' ')[0].toUpperCase();
