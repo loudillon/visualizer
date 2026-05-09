@@ -1883,7 +1883,7 @@ function getMobileNodePosition(node) {
   if (node.level === 1) return { x: 195, y: 34, r: 8.5 };
 
   if (node.level === 2) {
-    return { x: 34, y: branchTop(node.lane) + 8, r: 6.8 };
+    return { x: (branchLeft + branchRight) / 2, y: branchTop(node.lane) + 8, r: 6.8 };
   }
 
   if (node.level === 3) {
