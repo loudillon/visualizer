@@ -2129,6 +2129,7 @@ function computeFiringType(node, parent, months) {
   const moralProtection = resistanceProtection(node, parent);
   const shieldingManagerRisk = node.level === 4 && isShieldingManagerAtRisk(node);
   const shielding = node.level === 5 && parent && parent.level === 4 ? getShieldingManager(parent) : false;
+  const groundedPair = groundedBoss && node.currentType === 'N' && isMoralResistor(node);
   const tenureRamp = Math.min(1, Math.max(0, months - 6) / 30);
 
   // Grounded managers with real organizational cover are more able to remove
@@ -2150,6 +2151,7 @@ function computeFiringType(node, parent, months) {
   if (shieldingManagerRisk) chance += 0.008;
   if (shielding) chance -= 0.001;
   if (branchMetrics) chance += branchMetrics.exodusPressure * 0.012;
+  if (groundedPair) chance *= 0.18;
 
   chance = Math.max(0, Math.min(0.032, chance));
   return runRandom(node.seed, 171 + months) < chance;
