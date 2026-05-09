@@ -380,11 +380,11 @@
     box-shadow: 0 0 0 2px rgba(143, 35, 26, 0.22);
   }
   .dot-S {
-    width: 12px;
-    height: 10px;
-    border-radius: 3px;
-    border: 1.5px solid var(--grounded);
-    background: var(--grounded-soft);
+    width: 14px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--grounded);
+    box-shadow: 0 0 0 2px var(--grounded-soft);
   }
   .dot-X {
     width: 12px;
@@ -548,18 +548,6 @@
     text-anchor: middle;
   }
 
-  .shielded-cluster {
-    stroke: var(--grounded);
-    stroke-width: 1.35;
-    fill: rgba(75, 175, 169, 0.18);
-    filter: drop-shadow(0 0 5px rgba(75, 175, 169, 0.28));
-  }
-
-  .shielded-label {
-    fill: var(--grounded);
-    font-weight: 700;
-  }
-
   .oversight-link,
   .board-link {
     stroke: var(--gold);
@@ -605,6 +593,12 @@
     fill: none;
     opacity: 0.45;
     transition: opacity 0.25s ease, stroke 0.25s ease, stroke-width 0.25s ease;
+  }
+
+  .edge.shielded-edge {
+    stroke: var(--grounded);
+    stroke-width: 1;
+    opacity: 0.72;
   }
 
   .cluster-shell {
@@ -882,7 +876,7 @@
           <div class="legend-item has-help" data-help="capturedBehavior"><span class="dot dot-I"></span><span><strong>Captured behavior</strong></span></div>
           <div class="legend-item has-help" data-help="neutral"><span class="dot dot-N"></span><span><strong>Neutral</strong></span></div>
           <div class="legend-item has-help" data-help="grounded"><span class="dot dot-R"></span><span><strong>Grounded individual</strong></span></div>
-          <div class="legend-item"><span class="dot dot-S"></span><span><strong>Teal shell</strong> = grounded manager shielding team</span></div>
+          <div class="legend-item"><span class="dot dot-S"></span><span><strong>Teal lines</strong> = grounded manager shielding direct reports</span></div>
           <div class="legend-item"><span class="dot dot-O"></span><span><strong>Yellow flash</strong> = turnover</span></div>
           <div class="legend-item"><span class="dot dot-F"></span><span><strong>Dark red flash</strong> = firing</span></div>
           <div class="legend-item"><span class="dot dot-X"></span><span><strong>Exodus badge</strong> = branch under exodus pressure</span></div>
@@ -1328,12 +1322,16 @@ function renderManagerCluster(manager) {
   if (!manager || manager.level !== 4) return;
   const cluster = document.querySelector(`[data-cluster-for="${manager.id}"]`);
   const label = document.querySelector(`[data-cluster-label-for="${manager.id}"]`);
-  if (!cluster || !label) return;
-
   const shielded = getShieldingManager(manager);
-  cluster.classList.toggle('shielded-cluster', shielded);
-  label.classList.toggle('shielded-label', shielded);
-  label.textContent = shielded ? '4 ICs · shielded' : '4 ICs';
+  if (cluster) cluster.classList.remove('shielded-cluster');
+  if (label) {
+    label.classList.remove('shielded-label');
+    label.textContent = '4 ICs';
+  }
+
+  document.querySelectorAll(`[data-parent="${manager.id}"]`).forEach(edge => {
+    edge.classList.toggle('shielded-edge', shielded);
+  });
 }
 
 function computeBoardType(months) {
@@ -1706,6 +1704,7 @@ function buildStaticSvg() {
     line.setAttribute('x2', node.x);
     line.setAttribute('y2', node.level === 5 ? node.y - 9 : node.y - 2);
     line.setAttribute('class', 'edge');
+    line.setAttribute('data-parent', parent.id);
     line.setAttribute('data-child', node.id);
     line.setAttribute('data-level', node.level);
     line.setAttribute('marker-end', 'url(#arrow)');
@@ -2848,6 +2847,7 @@ function hardResetVisualState() {
   clearFocus();
   document.querySelectorAll('.turnover-flash').forEach(el => el.classList.remove('turnover-flash'));
   document.querySelectorAll('.fire-flash').forEach(el => el.classList.remove('fire-flash'));
+  document.querySelectorAll('.shielded-edge').forEach(el => el.classList.remove('shielded-edge'));
   document.querySelectorAll('.node-T, .node-I, .node-N').forEach(el => el.classList.remove('node-T', 'node-I', 'node-N', 'moral-resistor', 'grounded-individual', 'focus-node'));
   document.querySelectorAll('[data-id]').forEach(el => {
     const level = Number(el.getAttribute('data-level'));
