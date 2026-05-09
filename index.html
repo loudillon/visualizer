@@ -513,9 +513,9 @@
   }
 
   @keyframes exodusPulse {
-    0% { opacity: 0.85; filter: drop-shadow(0 0 0 rgba(210, 139, 69, 0)); }
+    0% { opacity: var(--exodus-rest-opacity, 0.85); filter: drop-shadow(0 0 0 rgba(210, 139, 69, 0)); }
     45% { opacity: 1; filter: drop-shadow(0 0 8px rgba(210, 139, 69, 0.85)); }
-    100% { opacity: 0.9; filter: drop-shadow(0 0 0 rgba(210, 139, 69, 0)); }
+    100% { opacity: var(--exodus-rest-opacity, 0.9); filter: drop-shadow(0 0 0 rgba(210, 139, 69, 0)); }
   }
 
   .lane-exodus-flash {
@@ -524,12 +524,12 @@
 
   .exodus-badge {
     opacity: 0;
-    transition: opacity 0.18s ease;
+    transition: opacity 0.55s ease;
     pointer-events: none;
   }
 
   .exodus-badge.visible {
-    opacity: 1;
+    opacity: var(--exodus-rest-opacity, 1);
   }
 
   .exodus-badge-box {
@@ -1824,8 +1824,13 @@ function updateBranchExodusVisuals() {
     }
 
     if (badge) {
-      badge.classList.toggle('visible', metrics.exodusTriggered);
-      if (STATE.exodusTriggeredMonths[lane] === STATE.timeMonths) {
+      const triggeredMonth = STATE.exodusTriggeredMonths[lane];
+      const monthsSinceTrigger = triggeredMonth == null ? 0 : Math.max(0, STATE.timeMonths - triggeredMonth);
+      const fadeMonths = 18;
+      const badgeOpacity = triggeredMonth == null ? 0 : Math.max(0, 1 - (monthsSinceTrigger / fadeMonths));
+      badge.style.setProperty('--exodus-rest-opacity', badgeOpacity.toFixed(3));
+      badge.classList.toggle('visible', badgeOpacity > 0);
+      if (triggeredMonth === STATE.timeMonths) {
         badge.classList.remove('lane-exodus-flash');
         void badge.getBoundingClientRect();
         badge.classList.add('lane-exodus-flash');
