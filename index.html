@@ -478,6 +478,41 @@
     display: block;
   }
 
+  svg.mobile-cascade {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 390 / 720;
+    display: none;
+    background: var(--bg-2);
+  }
+
+  .mobile-level-label {
+    font-size: 8px;
+    fill: var(--ink-3);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .mobile-branch-label {
+    font-size: 7px;
+    fill: var(--ink-3);
+    letter-spacing: 0.06em;
+    text-anchor: middle;
+  }
+
+  .mobile-edge {
+    stroke-width: 0.45;
+    opacity: 0.28;
+  }
+
+  .mobile-node {
+    stroke-width: 0.75;
+  }
+
+  .mobile-ic {
+    stroke-width: 0.55;
+  }
+
   svg text {
     font-family: Consolas, "Courier New", monospace;
     fill: var(--ink-2);
@@ -806,6 +841,14 @@
   @media (max-width: 680px) {
     body { padding: 10px; }
     .scenario-strip { grid-template-columns: 1fr; gap: 8px; }
+    .tree-frame { aspect-ratio: 390 / 720; }
+    svg.cascade { display: none; }
+    svg.mobile-cascade { display: block; }
+    .tree-topbar {
+      grid-template-columns: 1fr;
+      gap: 4px;
+    }
+    #counts-line { text-align: left; }
   }
 </style>
 </head>
@@ -956,6 +999,13 @@
           <g id="edges"></g>
           <g id="clusters"></g>
           <g id="nodes"></g>
+        </svg>
+        <svg class="mobile-cascade" viewBox="0 0 390 720" preserveAspectRatio="xMidYMin meet" role="img" aria-labelledby="mobile-cascade-title mobile-cascade-desc">
+          <title id="mobile-cascade-title">Mobile circle hierarchy map</title>
+          <desc id="mobile-cascade-desc">A mobile version of the organizational cascade where every role is represented by a circle. Color, flashes, grounded outlines, and teal shielding lines use the same model state as the desktop map.</desc>
+          <g id="mobile-guides"></g>
+          <g id="mobile-edges"></g>
+          <g id="mobile-nodes"></g>
         </svg>
       </div>
     </section>
@@ -1818,6 +1868,114 @@ function buildStaticSvg() {
   }
 }
 
+function getMobileNodePosition(node) {
+  const laneCenters = [39, 117, 195, 273, 351];
+
+  if (node.special === 'board') return { x: 354, y: 32, r: 7 };
+  if (node.level === 1) return { x: 195, y: 34, r: 8.5 };
+
+  if (node.level === 2) {
+    return { x: laneCenters[node.lane], y: 100, r: 7.2 };
+  }
+
+  if (node.level === 3) {
+    const local = Number(node.id.split('-')[1]) % 3;
+    return { x: laneCenters[node.lane] + [-22, 0, 22][local], y: 184, r: 5.5 };
+  }
+
+  if (node.level === 4) {
+    const local = Number(node.id.split('-')[1]) % 9;
+    const col = local % 3;
+    const row = Math.floor(local / 3);
+    return { x: laneCenters[node.lane] + [-23, 0, 23][col], y: 280 + row * 44, r: 4.4 };
+  }
+
+  if (node.level === 5) {
+    const local = Number(node.id.split('-')[1]) % 36;
+    const col = local % 6;
+    const row = Math.floor(local / 6);
+    return { x: laneCenters[node.lane] + (col - 2.5) * 10, y: 460 + row * 42, r: 2.7 };
+  }
+
+  return { x: 195, y: 34, r: 6 };
+}
+
+function buildMobileSvg() {
+  ['mobile-guides', 'mobile-edges', 'mobile-nodes'].forEach(id => {
+    const group = document.getElementById(id);
+    if (group) group.innerHTML = '';
+  });
+
+  const guides = document.getElementById('mobile-guides');
+  const edges = document.getElementById('mobile-edges');
+  const nodes = document.getElementById('mobile-nodes');
+  if (!guides || !edges || !nodes) return;
+
+  [
+    ['CEO', 34],
+    ['VP', 100],
+    ['DIR', 184],
+    ['MGR', 280],
+    ['IC', 460]
+  ].forEach(([label, y]) => {
+    const text = document.createElementNS(SVG_NS, 'text');
+    text.setAttribute('class', 'mobile-level-label');
+    text.setAttribute('x', 10);
+    text.setAttribute('y', y + 3);
+    text.textContent = label;
+    guides.appendChild(text);
+  });
+
+  for (let lane = 0; lane < 5; lane++) {
+    const x = [39, 117, 195, 273, 351][lane];
+    const label = document.createElementNS(SVG_NS, 'text');
+    label.setAttribute('class', 'mobile-branch-label');
+    label.setAttribute('x', x);
+    label.setAttribute('y', 82);
+    label.textContent = DEPARTMENT_NAMES[lane].split(' ')[0].toUpperCase();
+    guides.appendChild(label);
+  }
+
+  for (const node of NODES) {
+    if (!node.parentId) continue;
+    const parent = NODE_MAP.get(node.parentId);
+    if (!parent) continue;
+    const a = getMobileNodePosition(parent);
+    const b = getMobileNodePosition(node);
+    const line = document.createElementNS(SVG_NS, 'line');
+    line.setAttribute('x1', a.x);
+    line.setAttribute('y1', a.y + a.r + 1);
+    line.setAttribute('x2', b.x);
+    line.setAttribute('y2', b.y - b.r - 1);
+    line.setAttribute('class', 'edge mobile-edge');
+    line.setAttribute('data-parent', parent.id);
+    line.setAttribute('data-child', node.id);
+    line.setAttribute('data-level', node.level);
+    edges.appendChild(line);
+  }
+
+  for (const node of NODES) {
+    const pos = getMobileNodePosition(node);
+    const el = document.createElementNS(SVG_NS, 'circle');
+    el.setAttribute('cx', pos.x);
+    el.setAttribute('cy', pos.y);
+    el.setAttribute('r', pos.r);
+    el.setAttribute('class', `${node.level === 5 ? 'node ic-dot mobile-node mobile-ic node-N' : 'node leader mobile-node node-N'}${node.special ? ' special-node' : ''}`);
+    el.setAttribute('data-id', node.id);
+    el.setAttribute('data-level', node.level);
+    el.setAttribute('fill', 'none');
+    el.setAttribute('stroke', '#7A7264');
+    el.addEventListener('click', () => handleNodeClick(node));
+    el.addEventListener('mouseenter', () => focusSubtree(node.id));
+    el.addEventListener('mouseleave', clearFocus);
+
+    const title = document.createElementNS(SVG_NS, 'title');
+    title.textContent = `${getRoleName(node)}`;
+    el.appendChild(title);
+    nodes.appendChild(el);
+  }
+}
+
 function updateBranchExodusVisuals() {
   for (let lane = 0; lane < 5; lane++) {
     const metrics = getBranchMetrics(lane);
@@ -2407,10 +2565,12 @@ function renderNode(node) {
   };
 
   for (const el of elements) {
+    const isMobileNode = el.classList.contains('mobile-node') || (el.ownerSVGElement && el.ownerSVGElement.classList.contains('mobile-cascade'));
+    const mobileClass = isMobileNode ? ` mobile-node${node.level === 5 ? ' mobile-ic' : ''}` : '';
     const applyBasePaint = () => {
       const isGrounded = Boolean(resistorClass);
       el.classList.remove('node-T', 'node-I', 'node-N', 'moral-resistor', 'grounded-individual', 'turnover-flash', 'fire-flash', 'focus-node');
-      el.setAttribute('class', `${baseClass} node-${type}${resistorClass}`);
+      el.setAttribute('class', `${baseClass}${mobileClass} node-${type}${resistorClass}`);
       el.setAttribute('fill', fills[type]);
       el.setAttribute('stroke', isGrounded ? '#4BAFA9' : strokes[type]);
       el.style.removeProperty('fill');
@@ -3029,6 +3189,7 @@ function init() {
   buildTree();
   buildScenarioCards();
   buildStaticSvg();
+  buildMobileSvg();
   bindControls();
   bindInputTooltips();
   syncControlsToState();
