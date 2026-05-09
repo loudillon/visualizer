@@ -2540,6 +2540,7 @@ function resetSimulationToScenario(scenarioId) {
   if (!scenario) return;
 
   cancelPendingRenders();
+  clearFocus();
 
   STATE.scenarioId = scenarioId;
   STATE.controls = { ...scenario.controls };
@@ -2737,6 +2738,10 @@ function focusSubtree(rootId) {
   const ids = getDescendantIds(rootId);
   const root = NODE_MAP.get(rootId);
 
+  document.querySelectorAll('.focus-node, .focus-edge, .focus-cluster, .focus-label, .focus-lane').forEach(el => {
+    el.classList.remove('focus-node', 'focus-edge', 'focus-cluster', 'focus-label', 'focus-lane');
+  });
+
   if (root && root.special === 'board') {
     svg.classList.add('focus-mode');
     const nodeEl = document.querySelector(`[data-id="${rootId}"]`);
@@ -2756,10 +2761,6 @@ function focusSubtree(rootId) {
   const counts = getCounts(branchNodes);
 
   svg.classList.add('focus-mode');
-
-  document.querySelectorAll('.focus-node, .focus-edge, .focus-cluster, .focus-label, .focus-lane').forEach(el => {
-    el.classList.remove('focus-node', 'focus-edge', 'focus-cluster', 'focus-label', 'focus-lane');
-  });
 
   ids.forEach(id => {
     const node = NODE_MAP.get(id);
@@ -2855,10 +2856,12 @@ function hardResetVisualState() {
     el.setAttribute('class', `${baseClass} node-N`);
     el.setAttribute('fill', 'none');
     el.setAttribute('stroke', '#7A7264');
-    el.style.fill = 'none';
-    el.style.stroke = '#7A7264';
+    el.style.removeProperty('fill');
+    el.style.removeProperty('stroke');
     el.style.removeProperty('stroke-width');
     el.style.removeProperty('filter');
+    el.style.setProperty('fill', 'none');
+    el.style.setProperty('stroke', '#7A7264');
   });
   document.querySelectorAll('[data-cluster-for]').forEach(el => el.classList.remove('shielded-cluster', 'focus-cluster'));
   document.querySelectorAll('[data-cluster-label-for]').forEach(el => {
