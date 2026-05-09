@@ -1941,9 +1941,9 @@ function buildMobileSvg() {
     const pos = getMobileNodePosition(vp);
     const label = document.createElementNS(SVG_NS, 'text');
     label.setAttribute('class', 'mobile-branch-label');
-    label.setAttribute('x', pos.x + 13);
-    label.setAttribute('y', pos.y + 3);
-    label.setAttribute('text-anchor', 'start');
+    label.setAttribute('x', pos.x);
+    label.setAttribute('y', pos.y - 13);
+    label.setAttribute('text-anchor', 'middle');
     label.textContent = DEPARTMENT_NAMES[lane].split(' ')[0].toUpperCase();
     guides.appendChild(label);
   }
