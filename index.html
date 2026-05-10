@@ -686,6 +686,14 @@
     transition: opacity 0.25s ease, stroke 0.25s ease, stroke-width 0.25s ease;
   }
 
+  .edge-jog {
+    fill: none;
+  }
+
+  .edge-spine {
+    opacity: 0.55;
+  }
+
   .edge.shielded-edge,
   .manager-ic-link.shielded-edge {
     stroke: var(--grounded);
@@ -1074,11 +1082,14 @@
           <path class="arr" d="M 852 50 Q 852 72, 899 82" marker-end="url(#arrow)"/>
           <path class="arr" d="M 1567 50 Q 1567 72, 906 82" marker-end="url(#arrow)"/>
 
-          <text class="lbl" x="12" y="103">CEO</text>
-          <text class="lbl-count" x="12" y="115">1</text>
+          <text class="lbl" x="12" y="92">CEO</text>
+          <text class="lbl-count" x="12" y="104">1</text>
 
-          <text class="lbl" x="12" y="193">VP</text>
-          <text class="lbl-count" id="vp-count-label" x="12" y="205">5</text>
+          <text class="lbl" x="12" y="155">CXO</text>
+          <text class="lbl-count" id="csuite-count-label" x="12" y="167">6</text>
+
+          <text class="lbl" x="12" y="225">VP</text>
+          <text class="lbl-count" id="vp-count-label" x="12" y="237">5</text>
 
           <text class="lbl" x="12" y="313">DIR</text>
           <text class="lbl-count" id="dir-count-label" x="12" y="325">15</text>
@@ -1123,7 +1134,10 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 const SVG_WIDTH = 1800;
 const SVG_MIN_Y = 6;
 const SVG_DEFAULT_HEIGHT = 796;
-const LANE_TOP_Y = 162;
+const LANE_TOP_Y = 200;
+const CSUITE_LEVEL = 1.5;
+const CSUITE_SPINE_Y = 132;
+const CSUITE_BEAM_Y = 207;
 
 function getDesktopLayout() {
   const labelX = 10;
@@ -1137,8 +1151,9 @@ function getDesktopLayout() {
 }
 
 const TIER_Y = {
-  1: 80,
-  2: 205,
+  1: 70,
+  1.5: 150,
+  2: 220,
   3: 365,
   4: 570,
   5: 755
@@ -1147,6 +1162,7 @@ const TIER_Y = {
 const ROLE_NAMES = {
   0: 'Board',
   1: 'CEO',
+  1.5: 'C-Suite',
   2: 'VP',
   3: 'Director',
   4: 'Manager',
@@ -1161,6 +1177,19 @@ const TYPE_NAMES = {
 
 const TYPE_ORDER = ['T', 'I', 'N'];
 const BASE_DEPARTMENT_NAMES = ['Sales', 'Product', 'Engineering', 'Operations', 'Finance', 'Marketing', 'Customer', 'Data', 'Security', 'Support', 'Research', 'People / Legal / Compliance'];
+const CSUITE_ROSTER = [
+  { id: 'csuite-cro', label: 'CRO', departments: ['Sales', 'Marketing', 'Customer'] },
+  { id: 'csuite-cpo', label: 'CPO', departments: ['Product'] },
+  { id: 'csuite-cto', label: 'CTO', departments: ['Engineering', 'Data', 'Security', 'Research'] },
+  { id: 'csuite-coo', label: 'COO', departments: ['Operations', 'Support'] },
+  { id: 'csuite-cfo', label: 'CFO', departments: ['Finance'] },
+  { id: 'csuite-cco', label: 'CCO/GC', departments: ['People / Legal / Compliance'] }
+];
+const CSUITE_CCO_ID = 'csuite-cco';
+function getCxoIdForDepartment(deptName) {
+  const cxo = CSUITE_ROSTER.find(c => c.departments.includes(deptName));
+  return cxo ? cxo.id : 'csuite-coo';
+}
 const ORG_CONFIGS = {
   small: {
     id: 'small',
@@ -1286,24 +1315,21 @@ const NODES = [];
 const NODE_MAP = new Map();
 const CHILDREN_MAP = new Map();
 const LANE_MAP = new Map();
-const LEVELS = { 1: [], 2: [], 3: [], 4: [], 5: [] };
+const LEVELS = { 1: [], 1.5: [], 2: [], 3: [], 4: [], 5: [] };
+const SIM_LEVELS = [1, 1.5, 2, 3, 4, 5];
 const SIM_MONTHS = Array.from({ length: 61 }, (_, i) => i);
 const STATE_CACHE = new Map();
 
 function getDepartmentNames(count) {
   const names = [];
   for (let i = 0; i < count; i++) {
-    if (i === count - 1) {
-      names.push('People / Legal / Compliance');
-    } else {
-      names.push(BASE_DEPARTMENT_NAMES[i] || `Division ${i + 1}`);
-    }
+    names.push(BASE_DEPARTMENT_NAMES[i] || `Division ${i + 1}`);
   }
   return names;
 }
 
 function getOversightNodeId() {
-  return `2-${Math.max(0, ORG_CONFIG.vps - 1)}`;
+  return CSUITE_CCO_ID;
 }
 
 function getTotalPeople(config = ORG_CONFIG) {
@@ -1373,6 +1399,7 @@ function getDenseBubbleLayout(config = ORG_CONFIG) {
 function getLeaderSize(level) {
   return {
     1: { w: 26, h: 54 },
+    1.5: { w: 24, h: 50 },
     2: { w: 23, h: 48 },
     3: { w: 20, h: 42 },
     4: { w: 18, h: 38 }
@@ -1739,7 +1766,7 @@ function isExodusFlashNode(node, months = STATE.timeMonths) {
 }
 
 function canLeaderStartShielding(leader, months = STATE.timeMonths) {
-  if (!leader || leader.level < 2 || leader.level > 4 || leader.currentType !== 'N') return false;
+  if (!leader || leader.level < 1.5 || leader.level > 4 || leader.currentType !== 'N') return false;
   if (!isMoralResistor(leader)) return false;
   const boss = leader.parentId ? NODE_MAP.get(leader.parentId) : null;
   if (!boss || (boss.currentType !== 'T' && boss.currentType !== 'I')) return false;
@@ -1758,7 +1785,7 @@ function canLeaderStartShielding(leader, months = STATE.timeMonths) {
 }
 
 function activateLeaderShielding(leader, months) {
-  if (!leader || leader.level < 2 || leader.level > 4 || leader.currentType !== 'N') return false;
+  if (!leader || leader.level < 1.5 || leader.level > 4 || leader.currentType !== 'N') return false;
 
   if (leader.shieldingActive && leader.shieldingSeed === leader.occupantSeed) {
     return true;
@@ -1773,7 +1800,7 @@ function activateLeaderShielding(leader, months) {
 }
 
 function getShieldingLeader(leader) {
-  if (!leader || leader.level < 2 || leader.level > 4 || leader.currentType !== 'N') return false;
+  if (!leader || leader.level < 1.5 || leader.level > 4 || leader.currentType !== 'N') return false;
   if (!isMoralResistor(leader)) return false;
   if (!leader.shieldingActive || leader.shieldingSeed !== leader.occupantSeed) return false;
 
@@ -1782,12 +1809,12 @@ function getShieldingLeader(leader) {
 }
 
 function isShieldingLeaderAtRisk(leader) {
-  if (!leader || leader.level < 2 || leader.level > 4) return false;
+  if (!leader || leader.level < 1.5 || leader.level > 4) return false;
   return getShieldingLeader(leader);
 }
 
 function renderShieldingLeader(leader) {
-  if (!leader || leader.level < 2 || leader.level > 4) return;
+  if (!leader || leader.level < 1.5 || leader.level > 4) return;
   const cluster = document.querySelector(`[data-cluster-for="${leader.id}"]`);
   const label = document.querySelector(`[data-cluster-label-for="${leader.id}"]`);
   const shielded = getShieldingLeader(leader);
@@ -2041,21 +2068,58 @@ function buildTree() {
       if (child) children.push(child);
     }
     const avgX = children.reduce((s, n) => s + n.x, 0) / children.length;
+    const deptName = DEPARTMENT_NAMES[i];
 
     registerNode({
       id: `2-${i}`,
       x: avgX,
       y: TIER_Y[2],
       level: 2,
-      parentId: '1',
+      parentId: getCxoIdForDepartment(deptName),
       seed: hashSeed(`2-${i}`),
       lane: i,
-      roleName: `VP · ${DEPARTMENT_NAMES[i]}`
+      roleName: `VP · ${deptName}`
     });
   }
 
-  const vpNodes = LEVELS[2];
-  const ceoX = vpNodes.reduce((s, n) => s + n.x, 0) / vpNodes.length;
+  // Build C-suite layer at level 1.5. Each CXO gets x = avg of its VP children's x;
+  // CXOs with no VP children (in smaller orgs) are slotted to the right of the spine
+  // so the visual ordering still matches CSUITE_ROSTER.
+  const { chartLeft: csChartLeft, chartWidth: csChartWidth } = getDesktopLayout();
+  const presentCxos = [];
+  CSUITE_ROSTER.forEach(cxo => {
+    const vpChildren = LEVELS[2].filter(vp => vp.parentId === cxo.id);
+    presentCxos.push({ cxo, vpChildren });
+  });
+
+  // Childless CXOs (always includes CCO when no People/L/C VP exists) get spread across
+  // any remaining slots so the spine stays orderly.
+  const totalSlots = presentCxos.length;
+  presentCxos.forEach((entry, slotIndex) => {
+    const { cxo, vpChildren } = entry;
+    let x;
+    if (vpChildren.length) {
+      x = vpChildren.reduce((s, n) => s + n.x, 0) / vpChildren.length;
+    } else {
+      // Even spacing for childless CXOs (CCO when no People/L/C VP).
+      x = csChartLeft + ((slotIndex + 0.5) / totalSlots) * csChartWidth;
+    }
+    registerNode({
+      id: cxo.id,
+      x,
+      y: TIER_Y[1.5],
+      level: 1.5,
+      parentId: '1',
+      seed: hashSeed(cxo.id),
+      lane: null,
+      roleName: `${cxo.label} (C-Suite)`
+    });
+  });
+
+  const csuiteNodes = LEVELS[1.5];
+  const ceoX = csuiteNodes.length
+    ? csuiteNodes.reduce((s, n) => s + n.x, 0) / csuiteNodes.length
+    : (LEVELS[2].reduce((s, n) => s + n.x, 0) / Math.max(1, LEVELS[2].length));
 
   registerNode({
     id: '1',
@@ -2067,16 +2131,16 @@ function buildTree() {
     lane: null
   });
 
-  const oversightNode = NODE_MAP.get(OVERSIGHT_NODE_ID);
-  if (oversightNode) {
+  const ccoNode = NODE_MAP.get(CSUITE_CCO_ID);
+  if (ccoNode) {
     registerNode({
       id: BOARD_NODE_ID,
-      x: oversightNode.x,
+      x: ccoNode.x,
       y: 66,
       level: 0,
       parentId: null,
       seed: hashSeed(BOARD_NODE_ID),
-      lane: oversightNode.lane,
+      lane: null,
       special: 'board',
       roleName: 'Board'
     });
@@ -2125,6 +2189,7 @@ function updateStaticOrgLabels() {
     if (el) el.textContent = text;
   };
 
+  setText('csuite-count-label', String(LEVELS[1.5].length || CSUITE_ROSTER.length));
   setText('vp-count-label', String(vpCount));
   setText('dir-count-label', String(directorCount));
   setText('mgr-count-label', String(managerCount));
@@ -2179,7 +2244,7 @@ function buildStaticSvg() {
 
     const label = document.createElementNS(SVG_NS, 'text');
     label.setAttribute('x', x + laneWidth / 2);
-    label.setAttribute('y', 176);
+    label.setAttribute('y', LANE_TOP_Y + 14);
     label.setAttribute('text-anchor', 'middle');
     label.setAttribute('class', 'lane-label');
     label.setAttribute('data-lane-label', i);
@@ -2189,7 +2254,7 @@ function buildStaticSvg() {
     const badge = document.createElementNS(SVG_NS, 'g');
     badge.setAttribute('class', 'exodus-badge');
     badge.setAttribute('data-exodus-badge', i);
-    badge.setAttribute('transform', `translate(${x + laneWidth - 78}, 167)`);
+    badge.setAttribute('transform', `translate(${x + laneWidth - 78}, ${LANE_TOP_Y + 5})`);
 
     const badgeBox = document.createElementNS(SVG_NS, 'rect');
     badgeBox.setAttribute('class', 'exodus-badge-box');
@@ -2245,11 +2310,68 @@ function buildStaticSvg() {
     edgesGroup.appendChild(boardLink);
   }
 
+  // Jog connectors for the CEO ↔ C-suite ↔ VP zone. CEO drops to a horizontal spine,
+  // spine docks each CXO, each CXO drops jogged paths to its VPs. data-parent/data-child
+  // mirror the model edges so shielding (which toggles classes by data-parent) works for free.
+  const ceoNode = NODE_MAP.get('1');
+  const csuiteNodes = LEVELS[1.5];
+  if (ceoNode && csuiteNodes.length) {
+    const ceoBounds = getNodeVisualBounds(ceoNode);
+    const spineXs = csuiteNodes.map(n => n.x);
+    const spineLeft = Math.min(...spineXs, ceoNode.x);
+    const spineRight = Math.max(...spineXs, ceoNode.x);
+
+    // CEO down to spine.
+    const ceoDrop = document.createElementNS(SVG_NS, 'path');
+    ceoDrop.setAttribute('d', `M ${ceoNode.x} ${ceoBounds.bottom + getEdgeClearance(ceoNode)} L ${ceoNode.x} ${CSUITE_SPINE_Y}`);
+    ceoDrop.setAttribute('class', 'edge edge-jog edge-ceo-spine');
+    edgesGroup.appendChild(ceoDrop);
+
+    // Horizontal spine bar.
+    const spine = document.createElementNS(SVG_NS, 'path');
+    spine.setAttribute('d', `M ${spineLeft} ${CSUITE_SPINE_Y} L ${spineRight} ${CSUITE_SPINE_Y}`);
+    spine.setAttribute('class', 'edge edge-jog edge-spine');
+    edgesGroup.appendChild(spine);
+
+    // Per-CXO drops from spine into the CXO node, plus per-VP jogs from CXO down through the beam.
+    for (const cxo of csuiteNodes) {
+      const cxoBounds = getNodeVisualBounds(cxo);
+
+      const spineDrop = document.createElementNS(SVG_NS, 'path');
+      spineDrop.setAttribute('d', `M ${cxo.x} ${CSUITE_SPINE_Y} L ${cxo.x} ${cxoBounds.top - getEdgeClearance(cxo) - 5}`);
+      spineDrop.setAttribute('class', 'edge edge-jog');
+      spineDrop.setAttribute('data-parent', '1');
+      spineDrop.setAttribute('data-child', cxo.id);
+      spineDrop.setAttribute('data-level', cxo.level);
+      spineDrop.setAttribute('marker-end', 'url(#arrow)');
+      edgesGroup.appendChild(spineDrop);
+
+      const vpChildren = LEVELS[2].filter(vp => vp.parentId === cxo.id);
+      for (const vp of vpChildren) {
+        const vpBounds = getNodeVisualBounds(vp);
+        const path = document.createElementNS(SVG_NS, 'path');
+        const startY = cxoBounds.bottom + getEdgeClearance(cxo);
+        const endY = vpBounds.top - getEdgeClearance(vp) - 5;
+        path.setAttribute('d',
+          `M ${cxo.x} ${startY} L ${cxo.x} ${CSUITE_BEAM_Y} L ${vp.x} ${CSUITE_BEAM_Y} L ${vp.x} ${endY}`);
+        path.setAttribute('class', 'edge edge-jog');
+        path.setAttribute('data-parent', cxo.id);
+        path.setAttribute('data-child', vp.id);
+        path.setAttribute('data-level', vp.level);
+        path.setAttribute('marker-end', 'url(#arrow)');
+        edgesGroup.appendChild(path);
+      }
+    }
+  }
+
+  // Remaining edges (Director → Manager, etc.) stay as straight lines.
   for (const node of NODES) {
     if (!node.parentId) continue;
     const parent = NODE_MAP.get(node.parentId);
     if (!isDesktopRenderedNode(node) || !isDesktopRenderedNode(parent)) continue;
     if (isDenseDesktopMode() && node.level === 5) continue;
+    // Skip edges already drawn as jogs.
+    if (node.level === 1.5 || node.level === 2) continue;
 
     const line = document.createElementNS(SVG_NS, 'line');
     const endpoint = getClearedLineEndpoints(parent, node, { targetExtraClearance: 5 });
@@ -2387,23 +2509,29 @@ function getMobileNodePosition(node) {
     if (count <= 1) return (left + right) / 2;
     return left + (index / (count - 1)) * (right - left);
   };
-  const branchTop = lane => 76 + lane * 116;
+  const branchTop = lane => 104 + lane * 108;
   const branchLeft = 36;
   const branchRight = 354;
   const managerOffsets = [-32, 0, 32];
   const icOffsets = [-10.5, -3.5, 3.5, 10.5];
 
-  if (node.special === 'board') return { x: 354, y: 32, r: 7 };
-  if (node.level === 1) return { x: 195, y: 34, r: 8.5 };
+  if (node.special === 'board') return { x: 354, y: 22, r: 6.5 };
+  if (node.level === 1) return { x: 195, y: 30, r: 8 };
+
+  if (node.level === 1.5) {
+    const csuiteIndex = LEVELS[1.5].findIndex(n => n.id === node.id);
+    const total = LEVELS[1.5].length || 1;
+    return { x: spread(csuiteIndex, total, branchLeft, branchRight), y: 64, r: 5.4 };
+  }
 
   if (node.level === 2) {
-    return { x: (branchLeft + branchRight) / 2, y: branchTop(node.lane) + 8, r: 6.8 };
+    return { x: (branchLeft + branchRight) / 2, y: branchTop(node.lane) + 8, r: 6.4 };
   }
 
   if (node.level === 3) {
     const index = Number(node.id.split('-')[1]);
     const local = index % 3;
-    return { x: spread(local, 3, branchLeft + 16, branchRight - 16), y: branchTop(node.lane) + 30, r: 5.2 };
+    return { x: spread(local, 3, branchLeft + 16, branchRight - 16), y: branchTop(node.lane) + 28, r: 4.9 };
   }
 
   if (node.level === 4) {
@@ -2411,7 +2539,7 @@ function getMobileNodePosition(node) {
     const directorLocal = Math.floor((index % 9) / 3);
     const managerLocal = index % 3;
     const directorX = spread(directorLocal, 3, branchLeft + 16, branchRight - 16);
-    return { x: directorX + managerOffsets[managerLocal], y: branchTop(node.lane) + 66, r: 4.2 };
+    return { x: directorX + managerOffsets[managerLocal], y: branchTop(node.lane) + 60, r: 3.9 };
   }
 
   if (node.level === 5) {
@@ -2420,10 +2548,10 @@ function getMobileNodePosition(node) {
     const localIc = index % 4;
     const managerNode = NODE_MAP.get(`4-${managerIndex}`);
     const managerPos = getMobileNodePosition(managerNode);
-    return { x: managerPos.x + icOffsets[localIc], y: branchTop(node.lane) + 98, r: 2.55 };
+    return { x: managerPos.x + icOffsets[localIc], y: branchTop(node.lane) + 90, r: 2.4 };
   }
 
-  return { x: 195, y: 34, r: 6 };
+  return { x: 195, y: 30, r: 6 };
 }
 
 function buildMobileSvg() {
@@ -2440,9 +2568,10 @@ function buildMobileSvg() {
   if (!guides || !edges || !nodes) return;
 
   [
-    ['CEO', getMobileNodePosition(NODE_MAP.get('1')).y - 13, getMobileNodePosition(NODE_MAP.get('1')).x, 'middle'],
-    ['REGULATORY', getMobileNodePosition(NODE_MAP.get(BOARD_NODE_ID)).y - 13, getMobileNodePosition(NODE_MAP.get(BOARD_NODE_ID)).x, 'middle'],
-    ['BRANCHES', 84, 10, 'start']
+    ['CEO', getMobileNodePosition(NODE_MAP.get('1')).y - 12, getMobileNodePosition(NODE_MAP.get('1')).x, 'middle'],
+    ['REGULATORY', getMobileNodePosition(NODE_MAP.get(BOARD_NODE_ID)).y - 12, getMobileNodePosition(NODE_MAP.get(BOARD_NODE_ID)).x, 'middle'],
+    ['C-SUITE', 50, 10, 'start'],
+    ['BRANCHES', 92, 10, 'start']
   ].forEach(([label, y, x, anchor]) => {
     const text = document.createElementNS(SVG_NS, 'text');
     text.setAttribute('class', 'mobile-level-label');
@@ -2478,7 +2607,8 @@ function buildMobileSvg() {
     if (!node.parentId) continue;
     const parent = NODE_MAP.get(node.parentId);
     if (!parent) continue;
-    if (parent.level === 1) continue;
+    // On mobile, skip CEO→CXO and CXO→VP edges (top rows are spatially clear without lines).
+    if (parent.level === 1 || parent.level === 1.5) continue;
     const a = getMobileNodePosition(parent);
     const b = getMobileNodePosition(node);
     const line = document.createElementNS(SVG_NS, 'line');
@@ -2575,11 +2705,12 @@ function updateBranchExodusVisuals() {
 }
 
 function leadershipBlend(level) {
-  if (level === 1) return 1.00; // CEO / top executive
-  if (level === 2) return 1.00; // VP / executive
-  if (level === 3) return 0.68; // Directors partly reflect leadership selection
-  if (level === 4) return 0.35; // Managers partly selected by directors
-  return 0.00;                  // ICs use workforce baseline
+  if (level === 1) return 1.00;   // CEO / top executive
+  if (level === 1.5) return 1.00; // C-suite / CXO
+  if (level === 2) return 1.00;   // VP / executive
+  if (level === 3) return 0.68;   // Directors partly reflect leadership selection
+  if (level === 4) return 0.35;   // Managers partly selected by directors
+  return 0.00;                    // ICs use workforce baseline
 }
 
 function darkTriadRateForLevel(level) {
@@ -2596,6 +2727,7 @@ function darkTriadRateForLevel(level) {
 function roleTraitMultiplier(level) {
   // Modest concentration multiplier after choosing the level-specific base.
   if (level === 1) return 1.15;
+  if (level === 1.5) return 1.13;
   if (level === 2) return 1.10;
   if (level === 3) return 1.00;
   if (level === 4) return 0.82;
@@ -2677,6 +2809,7 @@ function isMoralResistor(node) {
     node.level === 4 ? 0.13 :
     node.level === 3 ? 0.10 :
     node.level === 2 ? 0.08 :
+    node.level === 1.5 ? 0.07 :
     0.08;
 
   return runRandom(node.occupantSeed, 123) < chance;
@@ -2961,7 +3094,7 @@ function computeOneMonthStep(months) {
   computeBoardType(months);
   computeOversightType(months);
 
-  for (let level = 1; level <= 5; level++) {
+  for (const level of SIM_LEVELS) {
     for (const node of LEVELS[level]) {
       if (node.id === OVERSIGHT_NODE_ID || node.id === BOARD_NODE_ID) continue;
       const prior = node.currentType;
@@ -3005,7 +3138,7 @@ function computeOneMonthStep(months) {
 
       // Shielding is an occupant-level stance. Only grounded neutral leaders can start shielding;
       // it persists until that leader is fired, turns over, or is manually/forcibly changed.
-      if (node.level >= 2 && node.level <= 4 && prior === 'N') {
+      if (node.level >= 1.5 && node.level <= 4 && prior === 'N') {
         activateLeaderShielding(node, months);
       }
 
@@ -3195,7 +3328,7 @@ function renderNode(node) {
       : `${node.roleName || 'Board'} · ${type === 'T' ? 'trait-led' : type === 'I' ? 'captured' : 'neutral'}`;
   }
 
-  if (node.level >= 2 && node.level <= 4) renderShieldingLeader(node);
+  if (node.level >= 1.5 && node.level <= 4) renderShieldingLeader(node);
 }
 
 function renderAggregateCluster(owner) {
@@ -3219,7 +3352,7 @@ function renderAggregateCluster(owner) {
     label.textContent = getAggregateLabel(owner, members);
   }
 
-  if (owner.level >= 2 && owner.level <= 4) {
+  if (owner.level >= 1.5 && owner.level <= 4) {
     renderShieldingLeader(owner);
   }
 }
@@ -3257,7 +3390,7 @@ function renderAllNodes(animated = false) {
   const board = getBoardNode();
   if (board) renderNode(board);
 
-  for (let level = 1; level <= 5; level++) {
+  SIM_LEVELS.forEach((level, i) => {
     const timer = setTimeout(() => {
       if (token !== STATE.renderToken) return;
       for (const node of LEVELS[level]) renderNode(node);
@@ -3266,9 +3399,9 @@ function renderAllNodes(animated = false) {
         updateBranchExodusVisuals();
         updateUiText();
       }
-    }, (level - 1) * 300);
+    }, i * 240);
     STATE.renderTimers.push(timer);
-  }
+  });
 }
 
 function recomputeAndRender(animated = false) {
