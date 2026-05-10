@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>How a Few Shape the Many — Dark Triad Cascade</title>
+<title>How a Few Shape the Many</title>
 <style>
   :root {
     --bg: #0E0D0B;
@@ -142,15 +142,12 @@
   .main {
     min-height: 0;
     display: grid;
-    grid-template-columns: 215px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 10px;
   }
 
   .rail {
-    min-height: 0;
-    display: grid;
-    grid-template-rows: auto auto auto;
-    gap: 8px;
+    display: none;
   }
 
   .panel {
@@ -177,13 +174,250 @@
     margin: 8px 0;
   }
 
+  .mechanic-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 4px;
+  }
+
+  .mechanic-row {
+    display: grid;
+    grid-template-columns: 70px 1fr 32px;
+    gap: 8px;
+    align-items: center;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 9px;
+    line-height: 1;
+  }
+
+  .mechanic-name {
+    color: var(--ink-2);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mechanic-name.has-help {
+    cursor: help;
+    color: var(--gold);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .mechanic-name.has-help::after {
+    content: "?";
+    width: 10px;
+    height: 10px;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid var(--rule);
+    border-radius: 50%;
+    color: var(--ink-3);
+    font-size: 7px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .mechanic-name.has-help:hover::after {
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+
+  input[type="range"].mechanic-slider {
+    height: 4px;
+    border-radius: 999px;
+    appearance: none;
+    -webkit-appearance: none;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    margin: 0;
+    width: 100%;
+  }
+
+  input[type="range"].mechanic-slider::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 999px;
+    background: transparent;
+  }
+
+  input[type="range"].mechanic-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 11px;
+    height: 11px;
+    margin-top: -3.5px;
+    border-radius: 50%;
+    background: var(--ink);
+    border: 1px solid var(--bg);
+    box-shadow: 0 0 0 1px var(--rule);
+  }
+
+  input[type="range"].mechanic-slider::-moz-range-track {
+    height: 4px;
+    border-radius: 999px;
+    background: transparent;
+  }
+
+  input[type="range"].mechanic-slider::-moz-range-thumb {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--ink);
+    border: 1px solid var(--bg);
+    box-shadow: 0 0 0 1px var(--rule);
+  }
+
+  .mechanic-value {
+    text-align: right;
+    color: var(--ink);
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 9px;
+  }
+
+  .mechanic-divider {
+    height: 1px;
+    background: var(--rule);
+    margin: 2px 0;
+  }
+
+  .balance-bar {
+    position: relative;
+    height: 10px;
+    background: linear-gradient(90deg, var(--clean) 0%, var(--gold) 50%, var(--trait) 100%);
+    border-radius: 999px;
+    border: 1px solid var(--rule);
+    overflow: visible;
+    margin-top: 4px;
+  }
+
+  .balance-bar-midpoint {
+    position: absolute;
+    top: -2px;
+    bottom: -2px;
+    left: 50%;
+    width: 1px;
+    background: rgba(0,0,0,0.45);
+    transform: translateX(-0.5px);
+    pointer-events: none;
+  }
+
+  .balance-bar-mark {
+    position: absolute;
+    top: -3px;
+    bottom: -3px;
+    width: 3px;
+    left: 0%;
+    background: var(--ink);
+    border: 1px solid var(--bg);
+    border-radius: 2px;
+    transform: translateX(-50%);
+    transition: left 200ms ease-out;
+    box-shadow: 0 0 0 1px var(--rule);
+  }
+
+  .balance-labels {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 7px;
+    line-height: 1;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-top: 3px;
+  }
+
+  .balance-center {
+    color: var(--ink);
+    font-size: 8px;
+    letter-spacing: 0.04em;
+    cursor: help;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+
+  .balance-center #tipping-val { color: var(--ink); font-weight: 600; }
+
+  #tipping-row.predatory .balance-bar { box-shadow: 0 0 0 1px var(--trait); }
+  #tipping-row.predatory .balance-center #tipping-val { color: var(--trait); }
+  #tipping-row.predatory .balance-side:last-child { color: var(--trait); }
+
+  .chart-time-bar {
+    grid-column: 1 / -1;
+    align-self: end;
+    margin: 0;
+    padding: 2px 6px;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    background: rgba(14, 13, 12, 0.35);
+  }
+
+  .chart-time-bar .chart-time-grid {
+    grid-template-columns: 18px 40px minmax(120px, 1fr) 40px 18px;
+    gap: 5px;
+  }
+
+  .chart-time-bar .chart-time-grid .btn {
+    min-height: 14px;
+    padding: 0 3px;
+    font-size: 9px;
+    line-height: 1;
+    margin: 0;
+  }
+  .chart-time-bar .chart-time-grid .btn + .btn { margin-top: 0; }
+
+  .chart-time-bar .slider-label,
+  .chart-time-bar .slider-value {
+    font-size: 7.5px;
+    line-height: 1;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    white-space: nowrap;
+    text-align: center;
+  }
+
+  .chart-time-bar input[type="range"] {
+    height: 3px;
+    margin: 0;
+  }
+
+  .mechanic-output .mechanic-name {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .mechanic-bar {
+    display: block;
+    height: 8px;
+    background: var(--bg-3);
+    border-radius: 999px;
+    border: 1px solid var(--rule);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .mechanic-bar-fill {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, var(--clean), var(--gold), var(--trait));
+    width: 0%;
+    transition: width 120ms ease-out;
+  }
+
   .slider-label {
     font-family: Consolas, "Courier New", monospace;
     color: var(--ink-2);
     font-size: 9px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    margin-bottom: 2px;
+    margin-bottom: 0;
   }
 
   .slider-label.has-help {
@@ -337,17 +571,17 @@
   .size-toggle {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
+    gap: 4px;
   }
 
   .size-btn {
     background: var(--bg-3);
     border: 1px solid var(--rule);
     color: var(--ink-2);
-    border-radius: 5px;
-    min-height: 30px;
+    border-radius: 4px;
+    min-height: 20px;
     font-family: Consolas, "Courier New", monospace;
-    font-size: 8.5px;
+    font-size: 7.5px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     cursor: pointer;
@@ -426,6 +660,121 @@
     line-height: 1.12;
   }
 
+  .chart-dock {
+    display: grid;
+    grid-template-columns: auto minmax(440px, 1.45fr) minmax(260px, 0.9fr) auto;
+    gap: 6px;
+    align-items: stretch;
+    padding: 5px 6px;
+    border: 1px solid var(--rule);
+    border-radius: 7px;
+    background: rgba(24, 23, 20, 0.92);
+  }
+
+  .chart-dock[hidden] {
+    display: none !important;
+  }
+
+  .chart-dock-section {
+    min-width: 0;
+    min-height: 48px;
+    border: 1px solid rgba(122, 114, 100, 0.38);
+    border-radius: 5px;
+    padding: 4px;
+    background: rgba(14, 13, 12, 0.35);
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    align-items: center;
+  }
+
+  .chart-dock-title {
+    font-family: Consolas, "Courier New", monospace;
+    color: var(--gold);
+    font-size: 7px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-align: center;
+    margin-bottom: 3px;
+  }
+
+  .chart-time-grid {
+    display: grid;
+    grid-template-columns: 36px minmax(90px, 1fr) 28px 24px 34px;
+    gap: 5px;
+    align-items: center;
+  }
+
+  .chart-time-grid .btn {
+    margin-top: 0;
+    padding: 3px 5px;
+    min-height: 20px;
+    font-size: 8px;
+  }
+
+  .chart-note {
+    display: none;
+  }
+
+  .chart-control-strip {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(110px, 1fr));
+    gap: 6px;
+    align-items: center;
+  }
+
+  .chart-control-strip .chart-control {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    gap: 3px;
+    align-items: center;
+  }
+
+  .chart-control-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .chart-control-strip .mechanic-name,
+  .chart-control-strip .mechanic-value {
+    font-size: 7.5px;
+    line-height: 1.15;
+  }
+
+  .chart-control-strip .mechanic-value {
+    color: var(--ink);
+    flex-shrink: 0;
+  }
+
+  .chart-dock input[type="range"] {
+    height: 4px;
+    margin: 0;
+  }
+
+  .chart-dock .slider-value {
+    font-size: 8px;
+    padding: 1px 0;
+  }
+
+  .chart-legend {
+    display: grid;
+    grid-template-columns: repeat(8, auto);
+    gap: 6px;
+    align-items: center;
+  }
+
+  .chart-legend .legend-item {
+    min-width: 0;
+    font-size: 8px;
+    line-height: 1.05;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .branch-panel {
     min-height: 0;
     overflow: hidden;
@@ -443,7 +792,7 @@
     min-width: 0;
     min-height: 0;
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
     align-content: stretch;
     gap: 4px;
   }
@@ -488,8 +837,11 @@
     position: relative;
     overflow: hidden;
     padding: 0;
-    aspect-ratio: 1800 / 796;
     align-self: start;
+  }
+
+  .tree-frame > .chart-dock-section {
+    display: none !important;
   }
 
   .tree-frame::before {
@@ -660,22 +1012,28 @@
     fill: var(--trait);
   }
 
-  .input-box {
-    fill: transparent;
-    stroke: var(--rule);
-    stroke-width: 1;
-  }
-
-  .input-box.hot {
-    stroke: var(--trait);
-    fill: rgba(199, 62, 46, 0.055);
-  }
-
-  .input-text {
-    font-size: 10px;
+  .cxo-label {
+    font-size: 8px;
     fill: var(--ink);
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-anchor: middle;
+    pointer-events: none;
+  }
+
+  .cxo-label.compromised {
+    fill: var(--trait);
+  }
+
+  .title-pill {
+    fill: var(--bg-3);
+    stroke: var(--rule);
+    stroke-width: 0.6;
+    pointer-events: none;
+  }
+
+  .title-pill.compromised {
+    stroke: var(--trait);
   }
 
   .arr, .edge {
@@ -692,6 +1050,15 @@
 
   .edge-spine {
     opacity: 0.55;
+  }
+
+  .chart-control {
+    min-width: 0;
+  }
+
+  .chart-control.hot .mechanic-name,
+  .chart-control.hot .mechanic-value {
+    color: var(--trait);
   }
 
   .edge.shielded-edge,
@@ -936,13 +1303,12 @@
     .app { height: auto; }
     .scenario-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     .main { grid-template-columns: 1fr; }
-    .tree-frame { aspect-ratio: 1800 / 796; }
   }
 
   @media (max-width: 680px) {
     body { padding: 10px; }
     .scenario-strip { grid-template-columns: 1fr; gap: 8px; }
-    .tree-frame { aspect-ratio: 390 / 675; }
+    .chart-dock { grid-template-columns: 1fr; }
     svg.cascade { display: none; }
     svg.mobile-cascade { display: block; }
     .tree-topbar {
@@ -965,7 +1331,7 @@
     <div class="eyebrow">Organizational pathology · Dark Triad cascade</div>
     <h1>How a <em>few</em> shape the many.</h1>
     <p class="deck">
-      A simulator exposing how Dark Triad personalities can shape organizations through incentives, selection, turnover, and accountability systems.
+      A simulator exposing how malevolent personality traits cascade influence through incentives, selection, turnover, and accountability systems.
     </p>
   </header>
 
@@ -974,39 +1340,8 @@
   <main class="main">
     <aside class="rail">
       <section class="panel">
-        <div class="panel-title">Causal inputs</div>
-
-        <div class="slider-row">
-          <div>
-            <div class="slider-label has-help" data-help="darkTriad">Leadership DT Rate</div>
-            <input id="darkTriad" class="gradient-slider risk-slider" type="range" min="0" max="20" step="0.5" value="4">
-            <div class="slider-caption"><span>0% sandbox</span><span>4% ref</span><span>20% high-risk</span></div>
-          </div>
-          <div class="slider-value" id="darkTriad-val">4%</div>
-        </div>
-
-        <div class="slider-row">
-          <div>
-            <div class="slider-label has-help" data-help="operatingPressure">Operating Pressure</div>
-            <input id="operatingPressure" class="gradient-slider risk-slider" type="range" min="0" max="100" value="86">
-            <div class="slider-caption"><span>Stakeholder norms</span><span>Extraction pressure</span></div>
-          </div>
-          <div class="slider-value" id="operatingPressure-val">86</div>
-        </div>
-
-        <div class="slider-row">
-          <div>
-            <div class="slider-label has-help" data-help="counterweights">Counterweights</div>
-            <input id="counterweights" class="gradient-slider protective-slider" type="range" min="0" max="100" value="12">
-            <div class="slider-caption"><span>Cosmetic oversight</span><span>Real consequences</span></div>
-          </div>
-          <div class="slider-value" id="counterweights-val">12</div>
-        </div>
-      </section>
-
-      <section class="panel">
         <div class="panel-title">Organization size</div>
-        <div class="size-toggle" id="org-size-toggle" aria-label="Organization size"></div>
+        <div class="size-toggle" id="rail-org-size-toggle" aria-label="Organization size"></div>
       </section>
 
       <section class="panel">
@@ -1014,16 +1349,16 @@
         <div class="slider-row">
           <div>
             <div class="slider-label" id="time-label">Year 0</div>
-            <input id="timeMonths" type="range" min="0" max="60" step="1" value="0">
+            <input id="rail-timeMonths" type="range" min="0" max="60" step="1" value="0">
           </div>
-          <div class="slider-value" id="timeMonths-val">0y</div>
+          <div class="slider-value" id="rail-timeMonths-val">0y</div>
         </div>
         <div class="time-label-row" aria-hidden="true">
           <span>0y</span><span>1y</span><span>2y</span><span>3y</span><span>4y</span><span>5y</span>
         </div>
-        <button class="btn" id="play-simulation" type="button" aria-label="Play or pause simulation" title="Play / pause">▶</button>
-        <button class="btn" id="new-run" type="button">New run</button>
-        <div class="note" id="timeline-note">Month 0: initial conditions before culture has had time to propagate.</div>
+        <button class="btn" id="rail-play-simulation" type="button" aria-label="Play or pause simulation" title="Play / pause">▶</button>
+        <button class="btn" id="rail-new-run" type="button">New run</button>
+        <div class="note" id="rail-timeline-note">Month 0: initial conditions before culture has had time to propagate.</div>
       </section>
 
       <section class="panel">
@@ -1043,13 +1378,87 @@
     </aside>
 
     <section class="tree-column">
+      <div class="chart-dock">
+        <section class="chart-dock-section">
+          <div class="chart-dock-title">Org</div>
+          <div class="size-toggle" id="org-size-toggle" aria-label="Organization size"></div>
+        </section>
+
+        <section class="chart-dock-section">
+          <div class="chart-dock-title">Inputs</div>
+          <div class="chart-control-strip">
+            <div class="chart-control" id="inp-darkTriad">
+              <div class="chart-control-heading">
+                <span class="mechanic-name has-help" data-help="darkTriad">Dark Triad</span>
+                <span class="mechanic-value" id="darkTriad-val">4%</span>
+              </div>
+              <input id="darkTriad" class="mechanic-slider risk-slider" type="range" min="0" max="20" step="0.5" value="4" />
+            </div>
+            <div class="chart-control" id="inp-pressureSelection">
+              <div class="chart-control-heading">
+                <span class="mechanic-name has-help" data-help="operatingPressure">Operating Pressure</span>
+                <span class="mechanic-value" id="operatingPressure-val">86</span>
+              </div>
+              <input id="operatingPressure" class="mechanic-slider risk-slider" type="range" min="0" max="100" value="86" />
+            </div>
+            <div class="chart-control" id="inp-accountability">
+              <div class="chart-control-heading">
+                <span class="mechanic-name has-help" data-help="counterweights">Counterweights</span>
+                <span class="mechanic-value" id="counterweights-val">12</span>
+              </div>
+              <input id="counterweights" class="mechanic-slider protective-slider" type="range" min="0" max="100" value="12" />
+            </div>
+          </div>
+        </section>
+
+        <section class="chart-dock-section">
+          <div class="chart-dock-title">Entropy</div>
+          <div class="chart-control" id="tipping-row">
+            <div class="balance-bar" aria-hidden="true">
+              <div class="balance-bar-midpoint"></div>
+              <div class="balance-bar-mark" id="tipping-fill"></div>
+            </div>
+            <div class="balance-labels">
+              <span class="balance-side">Defended</span>
+              <span class="balance-center has-help" data-help="tipping">Organizational Capture <span id="tipping-val">—</span></span>
+              <span class="balance-side">Predatory</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="chart-dock-section">
+          <div class="chart-dock-title">Legend</div>
+          <div class="legend chart-legend">
+            <div class="legend-item has-help" data-help="darkTriadState"><span class="dot dot-T"></span><span><strong>Dark Triad</strong></span></div>
+            <div class="legend-item has-help" data-help="capturedBehavior"><span class="dot dot-I"></span><span><strong>Captured</strong></span></div>
+            <div class="legend-item has-help" data-help="neutral"><span class="dot dot-N"></span><span><strong>Neutral</strong></span></div>
+            <div class="legend-item has-help" data-help="grounded"><span class="dot dot-R"></span><span><strong>Grounded</strong></span></div>
+            <div class="legend-item"><span class="dot dot-S"></span><span>Shielding</span></div>
+            <div class="legend-item"><span class="dot dot-O"></span><span>Turnover</span></div>
+            <div class="legend-item"><span class="dot dot-F"></span><span>Firing</span></div>
+            <div class="legend-item"><span class="dot dot-X"></span><span>Exodus</span></div>
+          </div>
+        </section>
+
+        <div class="chart-time-bar">
+          <div class="chart-time-grid">
+            <button class="btn" id="play-simulation" type="button" aria-label="Play or pause simulation" title="Play / pause">▶</button>
+            <div class="slider-label" id="time-label">0y</div>
+            <input id="timeMonths" type="range" min="0" max="60" step="1" value="0">
+            <div class="slider-value" id="timeMonths-val">0y</div>
+            <button class="btn" id="new-run" type="button" title="New run">↻</button>
+          </div>
+          <div class="chart-note" id="timeline-note">Month 0: initial conditions before culture has had time to propagate.</div>
+        </div>
+      </div>
+
       <div class="tree-topbar">
-        <div class="status" id="status-line"><strong>Founder Rot</strong> · Year 0 · Small org · 246 people</div>
-        <div class="status" id="counts-line">Dark Triad 0 · Influenced 0 · Neutral 246</div>
+        <div class="status" id="status-line"><strong>Founder Rot</strong> - Year 0 - Small org - 250 people</div>
+        <div class="status" id="counts-line">Dark Triad 0 - Influenced 0 - Neutral 250</div>
       </div>
 
       <div class="tree-frame">
-        <svg class="cascade" viewBox="0 6 1800 796" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="cascade-title cascade-desc">
+        <svg class="cascade" viewBox="0 48 1800 754" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="cascade-title cascade-desc">
           <title id="cascade-title">Dark Triad organizational cascade tree</title>
           <desc id="cascade-desc">An organization with CEO, VP, Director, Manager, and IC layers; a People / Legal / Compliance oversight branch; and a Board node that can police oversight. Dark Triad trait carriers, influenced behavior, shielding, exodus, and grounded resistance are shown as different node colors.</desc>
 
@@ -1065,39 +1474,22 @@
 
           <g id="lanes"></g>
 
-          <g id="inp-darkTriad">
-            <rect class="input-box" x="135" y="16" width="185" height="34" rx="3"/>
-            <text class="input-text" x="227.5" y="38" text-anchor="middle">Dark Triad</text>
-          </g>
-          <g id="inp-pressureSelection">
-            <rect class="input-box" x="722" y="16" width="260" height="34" rx="3"/>
-            <text class="input-text" x="852" y="38" text-anchor="middle">Operating Pressure</text>
-          </g>
-          <g id="inp-accountability">
-            <rect class="input-box" x="1468" y="16" width="198" height="34" rx="3"/>
-            <text class="input-text" x="1567" y="38" text-anchor="middle">Counterweights</text>
-          </g>
+          <text class="lbl" id="lbl-ceo" x="12" y="92">CEO</text>
+          <text class="lbl-count" id="lbl-ceo-count" x="12" y="104">1</text>
 
-          <path class="arr" d="M 227 50 Q 227 72, 895 82" marker-end="url(#arrow)"/>
-          <path class="arr" d="M 852 50 Q 852 72, 899 82" marker-end="url(#arrow)"/>
-          <path class="arr" d="M 1567 50 Q 1567 72, 906 82" marker-end="url(#arrow)"/>
+          <text class="lbl" id="lbl-cxo" x="12" y="155">CXO</text>
+          <text class="lbl-count" id="csuite-count-label" x="12" y="167">4</text>
 
-          <text class="lbl" x="12" y="92">CEO</text>
-          <text class="lbl-count" x="12" y="104">1</text>
-
-          <text class="lbl" x="12" y="155">CXO</text>
-          <text class="lbl-count" id="csuite-count-label" x="12" y="167">6</text>
-
-          <text class="lbl" x="12" y="225">VP</text>
+          <text class="lbl" id="lbl-vp" x="12" y="225">VP</text>
           <text class="lbl-count" id="vp-count-label" x="12" y="237">5</text>
 
-          <text class="lbl" x="12" y="313">DIR</text>
+          <text class="lbl" id="lbl-dir" x="12" y="313">DIR</text>
           <text class="lbl-count" id="dir-count-label" x="12" y="325">15</text>
 
-          <text class="lbl" x="12" y="473">MGR</text>
+          <text class="lbl" id="lbl-mgr" x="12" y="473">MGR</text>
           <text class="lbl-count" id="mgr-count-label" x="12" y="485">45</text>
 
-          <text class="lbl" x="12" y="613">IC</text>
+          <text class="lbl" id="lbl-ic" x="12" y="613">IC</text>
           <text class="lbl-count" id="ic-count-label" x="12" y="625">180</text>
 
           <g id="manager-ic-links"></g>
@@ -1133,11 +1525,11 @@ window.addEventListener('error', function(event) {
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const SVG_WIDTH = 1800;
 const SVG_MIN_Y = 6;
+const SVG_VIEWBOX_TOP = 48;
 const SVG_DEFAULT_HEIGHT = 796;
-const LANE_TOP_Y = 200;
+const LANE_TOP_Y = 228;
 const CSUITE_LEVEL = 1.5;
 const CSUITE_SPINE_Y = 132;
-const CSUITE_BEAM_Y = 207;
 
 function getDesktopLayout() {
   const labelX = 10;
@@ -1152,8 +1544,8 @@ function getDesktopLayout() {
 
 const TIER_Y = {
   1: 70,
-  1.5: 150,
-  2: 220,
+  1.5: 158,
+  2: 250,
   3: 365,
   4: 570,
   5: 755
@@ -1177,18 +1569,39 @@ const TYPE_NAMES = {
 
 const TYPE_ORDER = ['T', 'I', 'N'];
 const BASE_DEPARTMENT_NAMES = ['Sales', 'Product', 'Engineering', 'Operations', 'Finance', 'Marketing', 'Customer', 'Data', 'Security', 'Support', 'Research', 'People / Legal / Compliance'];
-const CSUITE_ROSTER = [
-  { id: 'csuite-cro', label: 'CRO', departments: ['Sales', 'Marketing', 'Customer'] },
-  { id: 'csuite-cpo', label: 'CPO', departments: ['Product'] },
-  { id: 'csuite-cto', label: 'CTO', departments: ['Engineering', 'Data', 'Security', 'Research'] },
-  { id: 'csuite-coo', label: 'COO', departments: ['Operations', 'Support'] },
-  { id: 'csuite-cfo', label: 'CFO', departments: ['Finance'] },
-  { id: 'csuite-cco', label: 'CCO/GC', departments: ['People / Legal / Compliance'] }
-];
 const CSUITE_CCO_ID = 'csuite-cco';
-function getCxoIdForDepartment(deptName) {
-  const cxo = CSUITE_ROSTER.find(c => c.departments.includes(deptName));
-  return cxo ? cxo.id : 'csuite-coo';
+const CSUITE_ROSTERS = {
+  small: [
+    { id: 'csuite-cro', label: 'CRO', roleName: 'CRO / Revenue', departments: ['Sales', 'Marketing', 'Customer'] },
+    { id: 'csuite-cto', label: 'CTO', roleName: 'CTO / Product', departments: ['Product', 'Engineering', 'Data', 'Security', 'Research'] },
+    { id: 'csuite-coo', label: 'COO/CFO', roleName: 'COO / CFO', departments: ['Operations', 'Finance', 'Support'] },
+    { id: CSUITE_CCO_ID, label: 'People Ops', roleName: 'People Ops / Counsel', departments: ['People / Legal / Compliance'], oversight: true }
+  ],
+  medium: [
+    { id: 'csuite-cro', label: 'CRO', roleName: 'CRO', departments: ['Sales', 'Marketing', 'Customer'] },
+    { id: 'csuite-cpo', label: 'CPO', roleName: 'CPO', departments: ['Product'] },
+    { id: 'csuite-cto', label: 'CTO', roleName: 'CTO', departments: ['Engineering', 'Data', 'Security', 'Research'] },
+    { id: 'csuite-coo', label: 'COO/CFO', roleName: 'COO / CFO', departments: ['Operations', 'Finance', 'Support'] },
+    { id: CSUITE_CCO_ID, label: 'People/Legal', roleName: 'People / Legal', departments: ['People / Legal / Compliance'], oversight: true }
+  ],
+  large: [
+    { id: 'csuite-cro', label: 'CRO', roleName: 'CRO', departments: ['Sales', 'Marketing', 'Customer'] },
+    { id: 'csuite-cpo', label: 'CPO', roleName: 'CPO', departments: ['Product'] },
+    { id: 'csuite-cto', label: 'CTO', roleName: 'CTO', departments: ['Engineering', 'Data', 'Security', 'Research'] },
+    { id: 'csuite-coo', label: 'COO', roleName: 'COO', departments: ['Operations', 'Support'] },
+    { id: 'csuite-cfo', label: 'CFO', roleName: 'CFO', departments: ['Finance'] },
+    { id: CSUITE_CCO_ID, label: 'CCO/GC', roleName: 'CCO / GC', departments: ['People / Legal / Compliance'], oversight: true }
+  ]
+};
+
+function getActiveCxoRoster(config = ORG_CONFIG) {
+  return CSUITE_ROSTERS[config.id] || CSUITE_ROSTERS.small;
+}
+
+function getCxoIdForDepartment(deptName, config = ORG_CONFIG) {
+  const roster = getActiveCxoRoster(config);
+  const cxo = roster.find(c => c.departments.includes(deptName));
+  return cxo ? cxo.id : roster[0].id;
 }
 const ORG_CONFIGS = {
   small: {
@@ -1221,12 +1634,17 @@ const ORG_CONFIGS = {
 };
 
 let ORG_CONFIG = { ...ORG_CONFIGS.small };
-let DEPARTMENT_NAMES = getDepartmentNames(ORG_CONFIG.vps);
-let OVERSIGHT_NODE_ID = getOversightNodeId();
+let DEPARTMENT_NAMES = getDepartmentNames(ORG_CONFIG.vps, ORG_CONFIG);
+let OVERSIGHT_NODE_ID = getOversightNodeId(ORG_CONFIG);
 const BOARD_NODE_ID = 'board';
 
 function getRoleName(node) {
   return node && (node.roleName || ROLE_NAMES[node.level] || 'Node');
+}
+
+function getCxoLabel(node) {
+  const cxo = node ? getActiveCxoRoster().find(entry => entry.id === node.id) : null;
+  return cxo ? cxo.label : 'CXO';
 }
 
 const SCENARIOS = {
@@ -1265,7 +1683,7 @@ const SCENARIOS = {
   compromisedOversight: {
     id: 'compromisedOversight',
     name: 'Compromised Oversight',
-    short: 'Formal safeguards look strong, but People / Legal / Compliance is captured, so accountability collapses in practice.',
+    short: 'Formal safeguards look strong, but oversight is compromised, so accountability collapses.',
     controls: { darkTriad: 6, operatingPressure: 74, counterweights: 82 },
     forcedTypes: { '1': 'N', '2-4': 'I', 'board': 'N' },
     executiveBias: 0.92
@@ -1308,6 +1726,8 @@ const STATE = {
   effectiveCounterweights: SCENARIOS.founderRot.controls.counterweights,
   exodusTriggeredMonths: {},
   oversightCollapseMonth: null,
+  tippingByMonth: new Map(),
+  tippingCrossedMonth: null,
   initialized: false
 };
 
@@ -1320,23 +1740,32 @@ const SIM_LEVELS = [1, 1.5, 2, 3, 4, 5];
 const SIM_MONTHS = Array.from({ length: 61 }, (_, i) => i);
 const STATE_CACHE = new Map();
 
-function getDepartmentNames(count) {
-  const names = [];
+function getDepartmentNames(count, config = ORG_CONFIG) {
+  const selected = [];
   for (let i = 0; i < count; i++) {
-    names.push(BASE_DEPARTMENT_NAMES[i] || `Division ${i + 1}`);
+    selected.push(BASE_DEPARTMENT_NAMES[i] || `Division ${i + 1}`);
   }
-  return names;
+  const cxoOrder = (deptName) => {
+    const roster = getActiveCxoRoster(config);
+    const idx = roster.findIndex(c => c.departments.includes(deptName));
+    return idx === -1 ? roster.length : idx;
+  };
+  return selected
+    .map((name, originalIndex) => ({ name, originalIndex, key: cxoOrder(name) }))
+    .sort((a, b) => a.key - b.key || a.originalIndex - b.originalIndex)
+    .map(entry => entry.name);
 }
 
-function getOversightNodeId() {
-  return CSUITE_CCO_ID;
+function getOversightNodeId(config = ORG_CONFIG) {
+  const oversight = getActiveCxoRoster(config).find(cxo => cxo.oversight);
+  return oversight ? oversight.id : CSUITE_CCO_ID;
 }
 
 function getTotalPeople(config = ORG_CONFIG) {
   const directors = config.vps * config.directorsPerVp;
   const managers = directors * config.managersPerDirector;
   const ics = managers * config.icsPerManager;
-  return 1 + config.vps + directors + managers + ics;
+  return 1 + getActiveCxoRoster(config).length + config.vps + directors + managers + ics;
 }
 
 function getVisibleDesktopLevelLimit() {
@@ -1350,8 +1779,7 @@ function isDesktopRenderedNode(node) {
 }
 
 function getClusterOwners() {
-  if (ORG_CONFIG.renderMode === 'denseDots') return [];
-  return LEVELS[4];
+  return [];
 }
 
 function getAggregateMembers(owner) {
@@ -1465,6 +1893,26 @@ function getClearedLineEndpoints(fromNode, toNode, { targetExtraClearance = 0 } 
   };
 }
 
+function getLaneDockPoint(lane) {
+  const { chartLeft, chartWidth } = getDesktopLayout();
+  const laneWidth = chartWidth / ORG_CONFIG.vps;
+  return {
+    x: chartLeft + lane * laneWidth + laneWidth / 2,
+    y: LANE_TOP_Y,
+    laneWidth
+  };
+}
+
+function getCxoToLaneConnector(cxo, vp) {
+  const cxoBounds = getNodeVisualBounds(cxo);
+  const dock = getLaneDockPoint(vp.lane);
+  const laneClearance = Math.max(1.5, Math.min(4, dock.laneWidth * 0.01));
+  const startY = cxoBounds.bottom + getEdgeClearance(cxo);
+  const endY = dock.y - laneClearance;
+  const beamY = startY + Math.max(0, endY - startY) * 0.5;
+  return { startY, beamY, endX: dock.x, endY };
+}
+
 function getDenseManagerPosition(index, config = ORG_CONFIG) {
   const layout = getDenseBubbleLayout(config);
   const managersPerLane = config.directorsPerVp * config.managersPerDirector;
@@ -1502,12 +1950,22 @@ function getDenseIcGap(managerY, config = ORG_CONFIG, layout = getDenseBubbleLay
 }
 
 function getDenseContentBottom(config = ORG_CONFIG) {
-  if (config.renderMode !== 'denseDots') return SVG_MIN_Y + SVG_DEFAULT_HEIGHT;
+  const managers = config.vps * config.directorsPerVp * config.managersPerDirector;
+  let bottom = TIER_Y[4];
+
+  if (config.renderMode !== 'denseDots') {
+    const layout = getNonDenseIcLayout(config);
+    bottom = Math.max(bottom, NON_DENSE_MANAGER_Y + getLeaderSize(4).h);
+    const lastIcCenter =
+      NON_DENSE_MANAGER_Y +
+      layout.icColumnTopGap +
+      Math.max(0, config.icsPerManager - 1) * (layout.icRadius * 2 + layout.icGap);
+    bottom = Math.max(bottom, lastIcCenter + layout.icRadius);
+    return Math.ceil(Math.max(SVG_VIEWBOX_TOP + 200, Math.min(SVG_MIN_Y + SVG_DEFAULT_HEIGHT, bottom + 16)));
+  }
 
   const layout = getDenseBubbleLayout(config);
-  const managers = config.vps * config.directorsPerVp * config.managersPerDirector;
-  let bottom = TIER_Y[4] + layout.managerRadius;
-
+  bottom = TIER_Y[4] + layout.managerRadius;
   for (let i = 0; i < managers; i++) {
     const manager = getDenseManagerPosition(i, config);
     const icGap = getDenseIcGap(manager.y, config, layout);
@@ -1522,19 +1980,36 @@ function getDenseContentBottom(config = ORG_CONFIG) {
 }
 
 function getDesktopViewBoxHeight() {
-  return getDenseContentBottom() - SVG_MIN_Y;
+  return getDenseContentBottom() - SVG_VIEWBOX_TOP;
 }
 
 function applyDesktopViewport() {
   const height = getDesktopViewBoxHeight();
   const aspect = `${SVG_WIDTH} / ${height}`;
   const svg = document.querySelector('svg.cascade');
-  const frame = document.querySelector('.tree-frame');
   if (svg) {
-    svg.setAttribute('viewBox', `0 ${SVG_MIN_Y} ${SVG_WIDTH} ${height}`);
+    svg.setAttribute('viewBox', `0 ${SVG_VIEWBOX_TOP} ${SVG_WIDTH} ${height}`);
     svg.style.aspectRatio = aspect;
   }
-  if (frame) frame.style.aspectRatio = aspect;
+}
+
+const NON_DENSE_MANAGER_Y = 480;
+
+function getManagerBaseY() {
+  return isDenseDesktopMode() ? TIER_Y[4] : NON_DENSE_MANAGER_Y;
+}
+
+function getNonDenseIcLayout(config = ORG_CONFIG) {
+  const icRadius = 5.2;
+  const icColumnTopGap = 72;
+  const icColumnBottom = 735;
+  const count = Math.max(1, config.icsPerManager);
+  const lastIcCenterMax = icColumnBottom - icRadius;
+  const centerSpan = Math.max(0, lastIcCenterMax - (NON_DENSE_MANAGER_Y + icColumnTopGap));
+  const icGap = count > 1
+    ? clamp(centerSpan / (count - 1) - icRadius * 2, 6, 28)
+    : 0;
+  return { icRadius, icColumnTopGap, icColumnBottom, icGap };
 }
 
 function getIcOffset(localIndex, count, managerY = TIER_Y[4]) {
@@ -1547,13 +2022,10 @@ function getIcOffset(localIndex, count, managerY = TIER_Y[4]) {
       y: layout.icColumnTopGap + localIndex * (layout.icRadius * 2 + icGap)
     };
   }
-  const columns = Math.min(4, count);
-  const rows = Math.ceil(count / columns);
-  const col = localIndex % columns;
-  const row = Math.floor(localIndex / columns);
+  const layout = getNonDenseIcLayout();
   return {
-    x: (col - (columns - 1) / 2) * 10,
-    y: row * 14 - (rows - 1) * 4
+    x: 0,
+    y: layout.icColumnTopGap + localIndex * (layout.icRadius * 2 + layout.icGap)
   };
 }
 
@@ -1636,6 +2108,8 @@ function resetRuntimeState() {
   STATE.exodusTriggeredMonths = {};
   STATE.exodusFlashNodes = {};
   STATE.oversightCollapseMonth = null;
+  STATE.tippingByMonth = new Map();
+  STATE.tippingCrossedMonth = null;
   STATE.effectiveCounterweights = STATE.controls.counterweights;
 
   for (const node of NODES) {
@@ -2008,12 +2482,15 @@ function buildTree() {
 
   const { chartLeft, chartWidth } = getDesktopLayout();
   const laneWidth = chartWidth / CONFIG.vps;
-  const managerStep = managers <= 1 ? 0 : chartWidth / (managers - 1);
+  const managerVisualInset = getLeaderSize(4).w / 2 + 2;
+  const managerSpanLeft = isDenseDesktopMode() ? chartLeft : chartLeft + managerVisualInset;
+  const managerSpanWidth = isDenseDesktopMode() ? chartWidth : Math.max(0, chartWidth - managerVisualInset * 2);
+  const managerStep = managers <= 1 ? 0 : managerSpanWidth / (managers - 1);
 
   for (let i = 0; i < managers; i++) {
     const densePosition = isDenseDesktopMode() ? getDenseManagerPosition(i, CONFIG) : null;
-    const x = densePosition ? densePosition.x : chartLeft + i * managerStep;
-    const y = densePosition ? densePosition.y : TIER_Y[4];
+    const x = densePosition ? densePosition.x : managerSpanLeft + i * managerStep;
+    const y = densePosition ? densePosition.y : NON_DENSE_MANAGER_Y;
     registerNode({
       id: `4-${i}`,
       x,
@@ -2034,7 +2511,7 @@ function buildTree() {
     registerNode({
       id: `5-${i}`,
       x: manager.x + offset.x,
-      y: isDenseDesktopMode() ? manager.y + offset.y : TIER_Y[5] + offset.y,
+      y: manager.y + offset.y,
       level: 5,
       parentId: `4-${managerIndex}`,
       seed: hashSeed(`5-${i}`),
@@ -2075,19 +2552,20 @@ function buildTree() {
       x: avgX,
       y: TIER_Y[2],
       level: 2,
-      parentId: getCxoIdForDepartment(deptName),
+      parentId: getCxoIdForDepartment(deptName, CONFIG),
       seed: hashSeed(`2-${i}`),
       lane: i,
       roleName: `VP · ${deptName}`
     });
   }
 
-  // Build C-suite layer at level 1.5. Each CXO gets x = avg of its VP children's x;
-  // CXOs with no VP children (in smaller orgs) are slotted to the right of the spine
-  // so the visual ordering still matches CSUITE_ROSTER.
+  // Build size-aware C-suite layer at level 1.5. Each CXO gets x = avg of its
+  // VP children's x; childless oversight functions still appear because most
+  // organizations have some HR/people/legal function before they have a full lane.
   const { chartLeft: csChartLeft, chartWidth: csChartWidth } = getDesktopLayout();
+  const cxoRoster = getActiveCxoRoster(CONFIG);
   const presentCxos = [];
-  CSUITE_ROSTER.forEach(cxo => {
+  cxoRoster.forEach(cxo => {
     const vpChildren = LEVELS[2].filter(vp => vp.parentId === cxo.id);
     presentCxos.push({ cxo, vpChildren });
   });
@@ -2112,13 +2590,13 @@ function buildTree() {
       parentId: '1',
       seed: hashSeed(cxo.id),
       lane: null,
-      roleName: `${cxo.label} (C-Suite)`
+      roleName: cxo.roleName || `${cxo.label} (C-Suite)`
     });
   });
 
   const csuiteNodes = LEVELS[1.5];
   const ceoX = csuiteNodes.length
-    ? csuiteNodes.reduce((s, n) => s + n.x, 0) / csuiteNodes.length
+    ? (Math.min(...csuiteNodes.map(n => n.x)) + Math.max(...csuiteNodes.map(n => n.x))) / 2
     : (LEVELS[2].reduce((s, n) => s + n.x, 0) / Math.max(1, LEVELS[2].length));
 
   registerNode({
@@ -2131,11 +2609,11 @@ function buildTree() {
     lane: null
   });
 
-  const ccoNode = NODE_MAP.get(CSUITE_CCO_ID);
-  if (ccoNode) {
+  const oversightNode = getOversightNode();
+  if (oversightNode) {
     registerNode({
       id: BOARD_NODE_ID,
-      x: ccoNode.x,
+      x: oversightNode.x,
       y: 66,
       level: 0,
       parentId: null,
@@ -2189,11 +2667,52 @@ function updateStaticOrgLabels() {
     if (el) el.textContent = text;
   };
 
-  setText('csuite-count-label', String(LEVELS[1.5].length || CSUITE_ROSTER.length));
+  setText('csuite-count-label', String(LEVELS[1.5].length || getActiveCxoRoster().length));
   setText('vp-count-label', String(vpCount));
   setText('dir-count-label', String(directorCount));
   setText('mgr-count-label', String(managerCount));
   setText('ic-count-label', String(icCount));
+
+  updateTierLabelPositions();
+}
+
+function updateTierLabelPositions() {
+  // Align each row label with the vertical center of its tier's figure.
+  // For ICs, use the midpoint of the column (top IC center → bottom IC center).
+  const setY = (id, y) => {
+    const el = document.getElementById(id);
+    if (el) el.setAttribute('y', y);
+  };
+  const placePair = (labelId, countId, centerY) => {
+    setY(labelId, centerY - 4);
+    setY(countId, centerY + 8);
+  };
+
+  placePair('lbl-ceo', 'lbl-ceo-count', TIER_Y[1] + getLeaderSize(1).h / 2);
+  placePair('lbl-cxo', 'csuite-count-label', TIER_Y[1.5] + getLeaderSize(1.5).h / 2);
+  placePair('lbl-vp',  'vp-count-label',     TIER_Y[2] + getLeaderSize(2).h / 2);
+  placePair('lbl-dir', 'dir-count-label',    TIER_Y[3] + getLeaderSize(3).h / 2);
+
+  // Manager center: dense uses TIER_Y[4] baseline; non-dense uses NON_DENSE_MANAGER_Y.
+  const mgrBaseY = isDenseDesktopMode() ? TIER_Y[4] : NON_DENSE_MANAGER_Y;
+  const mgrHeight = isDenseDesktopMode() ? getDenseBubbleLayout().managerRadius * 2 : getLeaderSize(4).h;
+  placePair('lbl-mgr', 'mgr-count-label', mgrBaseY + mgrHeight / 2);
+
+  // IC midpoint: average of first IC center and last IC center.
+  let icMidY;
+  if (isDenseDesktopMode()) {
+    const layout = getDenseBubbleLayout();
+    const icGap = getDenseIcGap(mgrBaseY, ORG_CONFIG, layout);
+    const firstCenter = mgrBaseY + layout.icColumnTopGap;
+    const lastCenter = firstCenter + Math.max(0, ORG_CONFIG.icsPerManager - 1) * (layout.icRadius * 2 + icGap);
+    icMidY = (firstCenter + lastCenter) / 2;
+  } else {
+    const layout = getNonDenseIcLayout();
+    const firstCenter = NON_DENSE_MANAGER_Y + layout.icColumnTopGap;
+    const lastCenter = firstCenter + Math.max(0, ORG_CONFIG.icsPerManager - 1) * (layout.icRadius * 2 + layout.icGap);
+    icMidY = (firstCenter + lastCenter) / 2;
+  }
+  placePair('lbl-ic', 'ic-count-label', icMidY);
 }
 
 function setOrgSize(sizeId) {
@@ -2203,8 +2722,8 @@ function setOrgSize(sizeId) {
   cancelPendingRenders();
   STATE.orgSize = next.id;
   ORG_CONFIG = { ...next };
-  DEPARTMENT_NAMES = getDepartmentNames(ORG_CONFIG.vps);
-  OVERSIGHT_NODE_ID = getOversightNodeId();
+  DEPARTMENT_NAMES = getDepartmentNames(ORG_CONFIG.vps, ORG_CONFIG);
+  OVERSIGHT_NODE_ID = getOversightNodeId(ORG_CONFIG);
   STATE.forcedTypes = getScenarioForcedTypes(STATE.scenarioId);
   STATE.timeMonths = 0;
 
@@ -2243,9 +2762,9 @@ function buildStaticSvg() {
     lanes.appendChild(rect);
 
     const label = document.createElementNS(SVG_NS, 'text');
-    label.setAttribute('x', x + laneWidth / 2);
+    label.setAttribute('x', x + 6);
     label.setAttribute('y', LANE_TOP_Y + 14);
-    label.setAttribute('text-anchor', 'middle');
+    label.setAttribute('text-anchor', 'start');
     label.setAttribute('class', 'lane-label');
     label.setAttribute('data-lane-label', i);
     label.textContent = getLaneLabel(i);
@@ -2274,7 +2793,7 @@ function buildStaticSvg() {
   }
 
   const managerIcLinks = document.getElementById('manager-ic-links');
-  if (managerIcLinks && isDenseDesktopMode()) {
+  if (managerIcLinks) {
     for (const manager of LEVELS[4]) {
       const children = getChildren(manager.id).filter(node => node.level === 5);
       if (!children.length) continue;
@@ -2310,10 +2829,11 @@ function buildStaticSvg() {
     edgesGroup.appendChild(boardLink);
   }
 
+  const ceoNode = NODE_MAP.get('1');
+
   // Jog connectors for the CEO ↔ C-suite ↔ VP zone. CEO drops to a horizontal spine,
   // spine docks each CXO, each CXO drops jogged paths to its VPs. data-parent/data-child
   // mirror the model edges so shielding (which toggles classes by data-parent) works for free.
-  const ceoNode = NODE_MAP.get('1');
   const csuiteNodes = LEVELS[1.5];
   if (ceoNode && csuiteNodes.length) {
     const ceoBounds = getNodeVisualBounds(ceoNode);
@@ -2338,7 +2858,8 @@ function buildStaticSvg() {
       const cxoBounds = getNodeVisualBounds(cxo);
 
       const spineDrop = document.createElementNS(SVG_NS, 'path');
-      spineDrop.setAttribute('d', `M ${cxo.x} ${CSUITE_SPINE_Y} L ${cxo.x} ${cxoBounds.top - getEdgeClearance(cxo) - 5}`);
+      // Land on the top edge of the CXO title pill (pill at y=cxo.y-14 height 10), not on the figure.
+      spineDrop.setAttribute('d', `M ${cxo.x} ${CSUITE_SPINE_Y} L ${cxo.x} ${cxo.y - 16}`);
       spineDrop.setAttribute('class', 'edge edge-jog');
       spineDrop.setAttribute('data-parent', '1');
       spineDrop.setAttribute('data-child', cxo.id);
@@ -2348,12 +2869,11 @@ function buildStaticSvg() {
 
       const vpChildren = LEVELS[2].filter(vp => vp.parentId === cxo.id);
       for (const vp of vpChildren) {
-        const vpBounds = getNodeVisualBounds(vp);
         const path = document.createElementNS(SVG_NS, 'path');
-        const startY = cxoBounds.bottom + getEdgeClearance(cxo);
-        const endY = vpBounds.top - getEdgeClearance(vp) - 5;
+        const connector = getCxoToLaneConnector(cxo, vp);
+        if (connector.endY <= connector.startY) continue;
         path.setAttribute('d',
-          `M ${cxo.x} ${startY} L ${cxo.x} ${CSUITE_BEAM_Y} L ${vp.x} ${CSUITE_BEAM_Y} L ${vp.x} ${endY}`);
+          `M ${cxo.x} ${connector.startY} L ${cxo.x} ${connector.beamY} L ${connector.endX} ${connector.beamY} L ${connector.endX} ${connector.endY}`);
         path.setAttribute('class', 'edge edge-jog');
         path.setAttribute('data-parent', cxo.id);
         path.setAttribute('data-child', vp.id);
@@ -2369,7 +2889,7 @@ function buildStaticSvg() {
     if (!node.parentId) continue;
     const parent = NODE_MAP.get(node.parentId);
     if (!isDesktopRenderedNode(node) || !isDesktopRenderedNode(parent)) continue;
-    if (isDenseDesktopMode() && node.level === 5) continue;
+    if (node.level === 5) continue;
     // Skip edges already drawn as jogs.
     if (node.level === 1.5 || node.level === 2) continue;
 
@@ -2469,6 +2989,26 @@ function buildStaticSvg() {
       el.setAttribute('width', leaderSize.w);
       el.setAttribute('height', leaderSize.h);
       el.setAttribute('class', 'node leader node-N');
+
+      if (node.level === CSUITE_LEVEL) {
+        const cxoLabel = document.createElementNS(SVG_NS, 'text');
+        cxoLabel.setAttribute('x', node.x);
+        cxoLabel.setAttribute('y', node.y - 6);
+        cxoLabel.setAttribute('class', 'cxo-label');
+        cxoLabel.setAttribute('data-cxo-label-for', node.id);
+        cxoLabel.textContent = getCxoLabel(node);
+        nodesGroup.appendChild(cxoLabel);
+      }
+
+      if (node.level === 1) {
+        const ceoLabel = document.createElementNS(SVG_NS, 'text');
+        ceoLabel.setAttribute('x', node.x);
+        ceoLabel.setAttribute('y', node.y - 3);
+        ceoLabel.setAttribute('class', 'cxo-label');
+        ceoLabel.setAttribute('data-cxo-label-for', node.id);
+        ceoLabel.textContent = 'CEO';
+        nodesGroup.appendChild(ceoLabel);
+      }
     }
 
     el.setAttribute('data-id', node.id);
@@ -2952,6 +3492,19 @@ function computeTurnoverType(node, parent, months) {
   if (shieldingManagerRisk) chance += 0.004;
   if (branchMetrics && node.currentType === 'N') chance += branchMetrics.exodusPressure * 0.030;
 
+  // Entropy Engine — Dead Sea Effect: T/I nodes resist removal (sticky rot).
+  const stickiness =
+    node.currentType === 'T' ? 0.45 :
+    node.currentType === 'I' ? 0.65 : 1.0;
+  chance *= stickiness;
+
+  // Entropy Engine — Toxic Exodus: as systemic tipping rises, grounded nodes leave more often.
+  if (node.currentType === 'N') {
+    const tip = STATE.tippingByMonth.get(months) ? STATE.tippingByMonth.get(months).T : 0;
+    const exodusBoost = clamp(tip - 0.7, 0, 1.5) * 0.025;
+    chance += exodusBoost;
+  }
+
   chance = Math.max(0.002, Math.min(0.070, chance));
   return runRandom(node.seed, 61 + months) < chance;
 }
@@ -3003,6 +3556,13 @@ function computeFiringType(node, parent, months) {
   if (branchMetrics) chance += branchMetrics.exodusPressure * 0.012;
   if (groundedPair) chance *= 0.18;
 
+  // Entropy Engine — Dead Sea Effect: T/I nodes resist firing the same way they resist
+  // voluntary departure. Firing red is now slow on top of red rarely quitting.
+  const stickiness =
+    node.currentType === 'T' ? 0.45 :
+    node.currentType === 'I' ? 0.65 : 1.0;
+  chance *= stickiness;
+
   chance = Math.max(0, Math.min(0.032, chance));
   return runRandom(node.seed, 171 + months) < chance;
 }
@@ -3043,6 +3603,16 @@ function resolveTurnoverReplacement(node, parent, months) {
   }
 
   if (parentType === 'N') redHireChance *= 0.45;
+
+  // Entropy Engine — Selection Bias: as systemic tipping rises, "cultural fit" actively
+  // filters out grounded candidates and inflates the captured/red pools.
+  const tip = STATE.tippingByMonth.get(months) ? STATE.tippingByMonth.get(months).T : 0;
+  const filterFailure = clamp(tip - 0.85, 0, 1.5);
+  if (filterFailure > 0) {
+    resistantChance *= (1 - filterFailure * 0.55);
+    alignedChance   *= (1 + filterFailure * 0.45);
+    redHireChance   *= (1 + filterFailure * 0.30);
+  }
 
   redHireChance = Math.max(0, Math.min(node.level <= 2 ? 0.11 : node.level <= 4 ? 0.06 : 0.01, redHireChance));
   alignedChance = Math.max(0, Math.min(0.50, alignedChance));
@@ -3199,6 +3769,35 @@ function computeOneMonthStep(months) {
   }
 }
 
+function computeTippingPoint(months) {
+  const leaders = NODES.filter(n => n.level >= 1 && n.level <= 4);
+  if (!leaders.length) return { T: 0, influence: 0, accountability: 1, regime: 'stable' };
+
+  let influenceWeight = 0;
+  let totalWeight = 0;
+  for (const node of leaders) {
+    const w = leadershipBlend(node.level);
+    influenceWeight += parentInfluencePressure(node.currentType) * w;
+    totalWeight += w;
+  }
+  const influence = influenceWeight / Math.max(0.001, totalWeight);
+
+  const board = getBoardNode();
+  const oversight = getOversightNode();
+  const accountabilityRaw = STATE.effectiveCounterweights / 100;
+  const boardLift =
+    board && board.currentType === 'N' ? 0.20 :
+    board && board.currentType === 'I' ? -0.05 : -0.15;
+  const oversightLift =
+    oversight && oversight.currentType === 'N' ? 0.15 :
+    oversight && oversight.currentType === 'I' ? -0.05 : -0.12;
+  const accountability = clamp(accountabilityRaw + boardLift + oversightLift, 0.05, 1.5);
+
+  const T = (influence / 0.30) / accountability;
+  const regime = T < 1 ? 'stable' : 'predatory';
+  return { T, influence, accountability, regime };
+}
+
 function computeAllNodeTypes() {
   const target = Number(STATE.timeMonths) || 0;
   resetRuntimeState();
@@ -3221,6 +3820,12 @@ function computeAllNodeTypes() {
 
     if (STATE.oversightCollapseMonth == null && getEffectiveCounterweights() <= 0) {
       STATE.oversightCollapseMonth = months;
+    }
+
+    const tipping = computeTippingPoint(months);
+    STATE.tippingByMonth.set(months, tipping);
+    if (STATE.tippingCrossedMonth == null && tipping.T >= 1) {
+      STATE.tippingCrossedMonth = months;
     }
   }
 
@@ -3326,6 +3931,12 @@ function renderNode(node) {
     specialLabel.textContent = node.id === BOARD_NODE_ID
       ? 'Board'
       : `${node.roleName || 'Board'} · ${type === 'T' ? 'trait-led' : type === 'I' ? 'captured' : 'neutral'}`;
+  }
+
+  const cxoLabel = document.querySelector(`[data-cxo-label-for="${node.id}"]`);
+  if (cxoLabel) {
+    cxoLabel.classList.toggle('compromised', type === 'T' || type === 'I');
+    if (node.level === CSUITE_LEVEL) cxoLabel.textContent = getCxoLabel(node);
   }
 
   if (node.level >= 1.5 && node.level <= 4) renderShieldingLeader(node);
@@ -3451,7 +4062,30 @@ function updateUiText() {
     note.textContent = 'Years 3-5: turnover compounds, exodus pressure can hollow out toxic branches, grounded leaders can shield teams, reduce capture below them, and remove trait-led direct reports when the system gives them cover.';
   }
 
+  if (STATE.tippingCrossedMonth != null && STATE.timeMonths >= STATE.tippingCrossedMonth) {
+    note.textContent += ` Capture overtook accountability at month ${STATE.tippingCrossedMonth} — the org has tipped: grounded hires get filtered out, trait-led and captured occupants stick, and grounded staff leak.`;
+  }
+
   updateInputHeat();
+  updateTippingReadout();
+}
+
+function updateTippingReadout() {
+  const mark = document.getElementById('tipping-fill');
+  const label = document.getElementById('tipping-val');
+  const row = document.getElementById('tipping-row');
+  if (!mark || !label || !row) return;
+
+  const tipping = STATE.tippingByMonth.get(STATE.timeMonths);
+  const T = tipping ? tipping.T : 0;
+  const regime = tipping ? tipping.regime : 'stable';
+
+  // Capture share = T / (T + 1). T=0 → 0, T=1 → 0.5 (the tipping midpoint), T→∞ → 1.
+  // Marker `left` percentage equals capture share so the midpoint dot sits at 50%.
+  const captureShare = T > 0 ? T / (T + 1) : 0;
+  mark.style.left = `${(captureShare * 100).toFixed(1)}%`;
+  label.textContent = T > 0 ? `${Math.round(captureShare * 100)}%` : '—';
+  row.classList.toggle('predatory', regime === 'predatory');
 }
 
 function syncControlsToState() {
@@ -3715,9 +4349,31 @@ function focusSubtree(rootId) {
     }
   });
 
+  // Walk up the focus root's ancestor chain. If we pass through a CXO before reaching the CEO,
+  // remember its id so the CEO drop + spine bar + spine→CXO arrow can highlight as one path.
+  const rootIsCeo = rootId === '1';
+  let chainCxoId = null;
+  {
+    let cur = root;
+    while (cur) {
+      if (cur.level === CSUITE_LEVEL) { chainCxoId = cur.id; break; }
+      cur = cur.parentId ? NODE_MAP.get(cur.parentId) : null;
+    }
+  }
+
   document.querySelectorAll('.edge').forEach(edge => {
     const child = edge.getAttribute('data-child');
     if (ids.has(child)) edge.classList.add('focus-edge');
+
+    // Spine bar + CEO→spine drop carry the whole CEO↔C-suite manifold; light them when hovering
+    // the CEO or any node inside a CXO's subtree.
+    if ((edge.classList.contains('edge-spine') || edge.classList.contains('edge-ceo-spine')) &&
+        (rootIsCeo || chainCxoId)) {
+      edge.classList.add('focus-edge');
+    }
+
+    // The specific spine→CXO arrow for the CXO that owns the focused subtree.
+    if (chainCxoId && child === chainCxoId) edge.classList.add('focus-edge');
   });
 
   const resistantPockets = branchNodes.filter(n => !n.special && n.currentType === 'N' && isMoralResistor(n)).length;
@@ -3766,8 +4422,8 @@ function updateInputHeat() {
   };
 
   Object.entries(hot).forEach(([id, isHot]) => {
-    const box = document.querySelector(`#${id} .input-box`);
-    if (box) box.classList.toggle('hot', isHot);
+    const control = document.getElementById(id);
+    if (control) control.classList.toggle('hot', isHot);
   });
 }
 
@@ -3838,7 +4494,7 @@ function bindInputTooltips() {
 
   const DESCS = {
     darkTriad: [
-      'Leadership DT Rate',
+      'Leadership Dark Triad',
       '<strong>Estimated Dark Triad concentration in leadership.</strong> This controls the assumed rate of narcissism, Machiavellianism, and psychopathy in senior leadership. 4% is the reference point; 20% represents a suspected high-risk environment. Setting it to 0% is a sandbox test, not a realistic population claim. The broad workforce baseline remains about 1% unless this is set to 0%.'
     ],
     operatingPressure: [
@@ -3864,6 +4520,10 @@ function bindInputTooltips() {
     grounded: [
       'Grounded Individual',
       '<strong>A grounded individual is internally anchored under pressure.</strong> In the model, this means they are harder to capture, coerce, flatter, intimidate, or filter into toxic alignment. As VPs, directors, or managers, they lower capture risk below them, can shield direct reports under hostile bosses, and are more likely to remove trait-led direct reports when counterweights give them cover.'
+    ],
+    tipping: [
+      'Capture vs. Accountability — Entropy Engine',
+      '<strong>A tug-of-war between toxic influence and the system\'s immune response.</strong> Influence weights every leader by level and trait severity; Accountability is effective counterweights lifted or dragged by board and oversight state. The marker shows who is winning. <strong>Left of midpoint = Defended:</strong> accountability still contains toxic actors. <strong>Right of midpoint = Predatory:</strong> the org has tipped — hiring filters out grounded candidates (Selection Bias), trait-led and captured occupants resist removal (Dead Sea Effect), and grounded staff leave faster (Toxic Exodus).'
     ]
   };
 
