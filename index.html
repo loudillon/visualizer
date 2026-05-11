@@ -1023,17 +1023,6 @@
     fill: var(--trait);
   }
 
-  .title-pill {
-    fill: var(--bg-3);
-    stroke: var(--rule);
-    stroke-width: 0.6;
-    pointer-events: none;
-  }
-
-  .title-pill.compromised {
-    stroke: var(--trait);
-  }
-
   .arr, .edge {
     stroke: var(--ink-3);
     stroke-width: 0.7;
@@ -1048,6 +1037,11 @@
 
   .edge-spine {
     opacity: 0.55;
+  }
+
+  .edge-spine-branch {
+    opacity: 0;
+    pointer-events: none;
   }
 
   .chart-control {
@@ -1210,11 +1204,16 @@
 
   svg.focus-mode .node,
   svg.focus-mode .edge,
+  svg.focus-mode .manager-ic-link,
   svg.focus-mode .cluster-shell,
   svg.focus-mode .cluster-label,
   svg.focus-mode .lane,
   svg.focus-mode .exodus-badge {
     opacity: 0.13;
+  }
+
+  svg.focus-mode .edge-spine-branch {
+    opacity: 0;
   }
 
   svg.focus-mode .focus-node {
@@ -1457,7 +1456,7 @@
       <div class="tree-frame">
         <svg class="cascade" viewBox="0 48 1800 754" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="cascade-title cascade-desc">
           <title id="cascade-title">Dark Triad organizational cascade tree</title>
-          <desc id="cascade-desc">An organization with CEO, VP, Director, Manager, and IC layers; a People / Legal / Compliance oversight branch; and a Board node that can police oversight. Dark Triad trait carriers, influenced behavior, shielding, exodus, and grounded resistance are shown as different node colors.</desc>
+          <desc id="cascade-desc">An organization with CEO, VP, Director, Manager, and IC layers; a People / Legal / Compliance oversight branch; and a Board node that can police oversight. Dark Triad trait carriers, influenced behavior, shielding, exodus, and grounded resistance are shown as different node colors. In Custom Placement mode, people nodes can be cycled through red, purple, neutral, and grounded states.</desc>
 
           <defs>
             <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
@@ -1496,7 +1495,7 @@
         </svg>
         <svg class="mobile-cascade" viewBox="0 0 390 675" preserveAspectRatio="xMidYMin meet" role="img" aria-labelledby="mobile-cascade-title mobile-cascade-desc">
           <title id="mobile-cascade-title">Mobile circle hierarchy map</title>
-          <desc id="mobile-cascade-desc">A mobile version of the organizational cascade where every role is represented by a circle. Color, flashes, grounded outlines, and teal shielding lines use the same model state as the desktop map.</desc>
+          <desc id="mobile-cascade-desc">A mobile version of the organizational cascade where every role is represented by a circle. Color, flashes, grounded outlines, manually assigned grounded status, and teal shielding lines use the same model state as the desktop map.</desc>
           <g id="mobile-guides"></g>
           <g id="mobile-edges"></g>
           <g id="mobile-nodes"></g>
@@ -1579,7 +1578,7 @@ const CSUITE_ROSTERS = {
     { id: 'csuite-cpo', label: 'CPO', roleName: 'CPO', departments: ['Product'] },
     { id: 'csuite-cto', label: 'CTO', roleName: 'CTO', departments: ['Engineering', 'Data', 'Security', 'Research'] },
     { id: 'csuite-coo', label: 'COO/CFO', roleName: 'COO / CFO', departments: ['Operations', 'Finance', 'Support'] },
-    { id: CSUITE_CCO_ID, label: 'People/Legal', roleName: 'People / Legal', departments: ['People / Legal / Compliance'], oversight: true }
+    { id: CSUITE_CCO_ID, label: 'People Ops', roleName: 'People Ops / Counsel', departments: ['People / Legal / Compliance'], oversight: true }
   ],
   large: [
     { id: 'csuite-cro', label: 'CRO', roleName: 'CRO', departments: ['Sales', 'Marketing', 'Customer'] },
@@ -1644,6 +1643,10 @@ function getCxoLabel(node) {
   return cxo ? cxo.label : 'CXO';
 }
 
+function getCxoLabelWidth(label) {
+  return Math.max(24, Math.min(62, label.length * 4.7 + 10));
+}
+
 const SCENARIOS = {
   founderRot: {
     id: 'founderRot',
@@ -1688,7 +1691,7 @@ const SCENARIOS = {
   customPlacement: {
     id: 'customPlacement',
     name: 'Custom Placement',
-    short: 'Click nodes to place red/purple/neutral, then run the timeline.',
+    short: 'Click people nodes to place red, purple, neutral, or grounded people, then run the timeline.',
     controls: { darkTriad: 4, operatingPressure: 50, counterweights: 50 },
     forcedTypes: {},
     executiveBias: 1.0,
@@ -1713,6 +1716,7 @@ const STATE = {
   timeMonths: 0,
   forcedTypes: getScenarioForcedTypes('founderRot'),
   manualOverrides: {},
+  groundedOverrides: {},
   customMode: false,
   playbackTimer: null,
   renderToken: 0,
@@ -1854,7 +1858,7 @@ function getDenseBubbleLayout(config = ORG_CONFIG) {
   const managerSlotWidth = directorSlotWidth / config.managersPerDirector;
   const managerRadius = clamp(managerSlotWidth * 0.16, 2.8, 4.2);
   const icRadius = clamp(managerSlotWidth * 0.075, 1.15, 2.05);
-  const icColumnTopGap = managerRadius + 34;
+  const icColumnTopGap = managerRadius + (config.id === 'large' ? 36 : config.id === 'medium' ? 35 : 34);
   const icColumnBottom = 792;
   const managerStaggerStep = Math.min(32, Math.max(12, managerSlotWidth * 0.52));
   const maxIcGap = Math.max(4.5, icRadius * 3.2);
@@ -1944,6 +1948,13 @@ function getClearedLineEndpoints(fromNode, toNode, { targetExtraClearance = 0 } 
   };
 }
 
+function getEdgeTargetExtraClearance(parent, child) {
+  if (isDenseDesktopMode() && parent && child && parent.level === 3 && child.level === 4) {
+    return ORG_CONFIG.id === 'large' ? 11 : 12;
+  }
+  return 5;
+}
+
 function getLaneDockPoint(lane) {
   const { chartLeft, chartWidth } = getDesktopLayout();
   const laneWidth = chartWidth / ORG_CONFIG.vps;
@@ -1978,31 +1989,41 @@ function getDenseManagerPosition(index, config = ORG_CONFIG) {
     directorLocal * layout.directorSlotWidth +
     (managerLocal + 0.5) * layout.managerSlotWidth;
 
-  const rawY = TIER_Y[4] + (managerLocal - midpoint) * layout.managerStaggerStep;
+  const managerBaseY = getDenseManagerBaseY(config);
+  const rawY = managerBaseY + (managerLocal - midpoint) * layout.managerStaggerStep;
   const icColumnHeight =
     config.icsPerManager * layout.icRadius * 2 +
     Math.max(0, config.icsPerManager - 1) * getDenseIcGap(rawY, config, layout);
   const maxY = layout.icColumnBottom - layout.icColumnTopGap - icColumnHeight;
-  const minY = TIER_Y[4] - 36;
+  const minY = managerBaseY - 36;
   const y = clamp(rawY, minY, maxY);
 
   return { x, y };
 }
 
 function getDenseIcGap(managerY, config = ORG_CONFIG, layout = getDenseBubbleLayout(config)) {
-  const icColumnHeight = Math.max(0, layout.icColumnBottom - (managerY + layout.icColumnTopGap));
-  return Math.max(
-    0.75,
-    Math.min(
-      layout.maxIcGap,
-      (icColumnHeight - config.icsPerManager * layout.icRadius * 2) / Math.max(1, config.icsPerManager - 1)
-    )
-  );
+  return getDenseIcColumnMetrics(managerY, config, layout).icGap;
+}
+
+function getDenseIcTargetLastCenter(config = ORG_CONFIG, layout = getDenseBubbleLayout(config)) {
+  const midpoint = (config.managersPerDirector - 1) / 2;
+  const lowestManagerY = getDenseManagerBaseY(config) + midpoint * layout.managerStaggerStep;
+  const icStep = layout.icRadius * 2 + layout.maxIcGap;
+  return lowestManagerY + layout.icColumnTopGap + Math.max(0, config.icsPerManager - 1) * icStep;
+}
+
+function getDenseIcColumnMetrics(managerY, config = ORG_CONFIG, layout = getDenseBubbleLayout(config)) {
+  const icGap = layout.maxIcGap;
+  const icStep = layout.icRadius * 2 + icGap;
+  const stackSpan = Math.max(0, config.icsPerManager - 1) * icStep;
+  const targetLastCenter = getDenseIcTargetLastCenter(config, layout);
+  const icColumnTopGap = Math.max(layout.icColumnTopGap, targetLastCenter - managerY - stackSpan);
+  return { icGap, icColumnTopGap };
 }
 
 function getDenseContentBottom(config = ORG_CONFIG) {
   const managers = config.vps * config.directorsPerVp * config.managersPerDirector;
-  let bottom = TIER_Y[4];
+  let bottom = getManagerBaseY(config);
 
   if (config.renderMode !== 'denseDots') {
     const layout = getNonDenseIcLayout(config);
@@ -2016,18 +2037,20 @@ function getDenseContentBottom(config = ORG_CONFIG) {
   }
 
   const layout = getDenseBubbleLayout(config);
-  bottom = TIER_Y[4] + layout.managerRadius;
+  bottom = getDenseManagerBaseY(config) + layout.managerRadius;
   for (let i = 0; i < managers; i++) {
     const manager = getDenseManagerPosition(i, config);
-    const icGap = getDenseIcGap(manager.y, config, layout);
+    const icMetrics = getDenseIcColumnMetrics(manager.y, config, layout);
     const lastIcCenter =
       manager.y +
-      layout.icColumnTopGap +
-      Math.max(0, config.icsPerManager - 1) * (layout.icRadius * 2 + icGap);
+      icMetrics.icColumnTopGap +
+      Math.max(0, config.icsPerManager - 1) * (layout.icRadius * 2 + icMetrics.icGap);
     bottom = Math.max(bottom, lastIcCenter + layout.icRadius);
   }
 
-  return Math.ceil(Math.max(690, Math.min(SVG_MIN_Y + SVG_DEFAULT_HEIGHT, bottom + 18)));
+  const minHeight = config.id === 'large' ? 648 : config.id === 'medium' ? 640 : 668;
+  const bottomPad = config.id === 'large' ? 8 : config.id === 'medium' ? 8 : 10;
+  return Math.ceil(Math.max(minHeight, Math.min(SVG_MIN_Y + SVG_DEFAULT_HEIGHT, bottom + bottomPad)));
 }
 
 function getDesktopViewBoxHeight() {
@@ -2046,8 +2069,13 @@ function applyDesktopViewport() {
 
 const NON_DENSE_MANAGER_Y = 480;
 
-function getManagerBaseY() {
-  return isDenseDesktopMode() ? TIER_Y[4] : NON_DENSE_MANAGER_Y;
+function getDenseManagerBaseY(config = ORG_CONFIG) {
+  if (config.renderMode !== 'denseDots') return NON_DENSE_MANAGER_Y;
+  return config.id === 'large' ? 510 : 522;
+}
+
+function getManagerBaseY(config = ORG_CONFIG) {
+  return config.renderMode === 'denseDots' ? getDenseManagerBaseY(config) : NON_DENSE_MANAGER_Y;
 }
 
 function getNonDenseIcLayout(config = ORG_CONFIG) {
@@ -2067,10 +2095,10 @@ function getIcOffset(localIndex, count, managerY = TIER_Y[4]) {
   if (count <= 1) return { x: 0, y: 0 };
   if (isDenseDesktopMode()) {
     const layout = getDenseBubbleLayout();
-    const icGap = getDenseIcGap(managerY, ORG_CONFIG, layout);
+    const icMetrics = getDenseIcColumnMetrics(managerY, ORG_CONFIG, layout);
     return {
       x: 0,
-      y: layout.icColumnTopGap + localIndex * (layout.icRadius * 2 + icGap)
+      y: icMetrics.icColumnTopGap + localIndex * (layout.icRadius * 2 + icMetrics.icGap)
     };
   }
   const layout = getNonDenseIcLayout();
@@ -2083,8 +2111,35 @@ function getIcOffset(localIndex, count, managerY = TIER_Y[4]) {
 function getLaneLabel(lane) {
   const name = DEPARTMENT_NAMES[lane] || `Division ${lane + 1}`;
   if (ORG_CONFIG.vps <= 6) return name;
-  if (name.includes('People')) return 'People / Legal';
+  if (name.includes('People')) return ORG_CONFIG.id === 'large' ? 'People / Legal' : 'People Ops';
   return name.split(' ')[0];
+}
+
+function resolveCxoLabelSpacing(placements, chartLeft, chartWidth) {
+  const rightEdge = chartLeft + chartWidth;
+  const minGap = ORG_CONFIG.id === 'medium' ? 9 : 7;
+  const sorted = [...placements].sort((a, b) => a.x - b.x);
+
+  sorted.forEach(placement => {
+    placement.x = clamp(placement.x, chartLeft + placement.halfWidth, rightEdge - placement.halfWidth);
+  });
+
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = sorted[i - 1];
+    const current = sorted[i];
+    current.x = Math.max(current.x, prev.x + prev.halfWidth + current.halfWidth + minGap);
+  }
+
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const current = sorted[i];
+    if (i === sorted.length - 1) {
+      current.x = Math.min(current.x, rightEdge - current.halfWidth);
+    } else {
+      const next = sorted[i + 1];
+      current.x = Math.min(current.x, next.x - next.halfWidth - current.halfWidth - minGap);
+    }
+    current.x = Math.max(current.x, chartLeft + current.halfWidth);
+  }
 }
 
 function isDenseDesktopMode() {
@@ -2624,7 +2679,7 @@ function buildTree() {
   // Childless CXOs (always includes CCO when no People/L/C VP exists) get spread across
   // any remaining slots so the spine stays orderly.
   const totalSlots = presentCxos.length;
-  presentCxos.forEach((entry, slotIndex) => {
+  const cxoPlacements = presentCxos.map((entry, slotIndex) => {
     const { cxo, vpChildren } = entry;
     let x;
     if (vpChildren.length) {
@@ -2633,6 +2688,14 @@ function buildTree() {
       // Even spacing for childless CXOs (CCO when no People/L/C VP).
       x = csChartLeft + ((slotIndex + 0.5) / totalSlots) * csChartWidth;
     }
+    return {
+      cxo,
+      x,
+      halfWidth: getCxoLabelWidth(cxo.label || 'CXO') / 2
+    };
+  });
+  resolveCxoLabelSpacing(cxoPlacements, csChartLeft, csChartWidth);
+  cxoPlacements.forEach(({ cxo, x }) => {
     registerNode({
       id: cxo.id,
       x,
@@ -2744,8 +2807,7 @@ function updateTierLabelPositions() {
   placePair('lbl-vp',  'vp-count-label',     TIER_Y[2] + getLeaderSize(2).h / 2);
   placePair('lbl-dir', 'dir-count-label',    TIER_Y[3] + getLeaderSize(3).h / 2);
 
-  // Manager center: dense uses TIER_Y[4] baseline; non-dense uses NON_DENSE_MANAGER_Y.
-  const mgrBaseY = isDenseDesktopMode() ? TIER_Y[4] : NON_DENSE_MANAGER_Y;
+  const mgrBaseY = getManagerBaseY();
   const mgrHeight = isDenseDesktopMode() ? getDenseBubbleLayout().managerRadius * 2 : getLeaderSize(4).h;
   placePair('lbl-mgr', 'mgr-count-label', mgrBaseY + mgrHeight / 2);
 
@@ -2753,9 +2815,9 @@ function updateTierLabelPositions() {
   let icMidY;
   if (isDenseDesktopMode()) {
     const layout = getDenseBubbleLayout();
-    const icGap = getDenseIcGap(mgrBaseY, ORG_CONFIG, layout);
-    const firstCenter = mgrBaseY + layout.icColumnTopGap;
-    const lastCenter = firstCenter + Math.max(0, ORG_CONFIG.icsPerManager - 1) * (layout.icRadius * 2 + icGap);
+    const icMetrics = getDenseIcColumnMetrics(mgrBaseY, ORG_CONFIG, layout);
+    const firstCenter = mgrBaseY + icMetrics.icColumnTopGap;
+    const lastCenter = firstCenter + Math.max(0, ORG_CONFIG.icsPerManager - 1) * (layout.icRadius * 2 + icMetrics.icGap);
     icMidY = (firstCenter + lastCenter) / 2;
   } else {
     const layout = getNonDenseIcLayout();
@@ -2877,7 +2939,9 @@ function buildStaticSvg() {
     const boardLink = document.createElementNS(SVG_NS, 'path');
     const endpoint = getClearedLineEndpoints(board, oversightNode);
     boardLink.setAttribute('d', `M ${endpoint.x1} ${endpoint.y1} L ${endpoint.x2} ${endpoint.y2}`);
-    boardLink.setAttribute('class', 'board-link');
+    boardLink.setAttribute('class', 'edge board-link');
+    boardLink.setAttribute('data-parent', board.id);
+    boardLink.setAttribute('data-child', oversightNode.id);
     edgesGroup.appendChild(boardLink);
   }
 
@@ -2908,6 +2972,12 @@ function buildStaticSvg() {
     // Per-CXO drops from spine into the CXO node, plus per-VP jogs from CXO down through the beam.
     for (const cxo of csuiteNodes) {
       const cxoBounds = getNodeVisualBounds(cxo);
+
+      const spineBranch = document.createElementNS(SVG_NS, 'path');
+      spineBranch.setAttribute('d', `M ${ceoNode.x} ${CSUITE_SPINE_Y} L ${cxo.x} ${CSUITE_SPINE_Y}`);
+      spineBranch.setAttribute('class', 'edge edge-jog edge-spine-branch');
+      spineBranch.setAttribute('data-spine-for', cxo.id);
+      edgesGroup.appendChild(spineBranch);
 
       const spineDrop = document.createElementNS(SVG_NS, 'path');
       // Land on the top edge of the CXO title pill (pill at y=cxo.y-14 height 10), not on the figure.
@@ -2946,7 +3016,7 @@ function buildStaticSvg() {
     if (node.level === 1.5 || node.level === 2) continue;
 
     const line = document.createElementNS(SVG_NS, 'line');
-    const endpoint = getClearedLineEndpoints(parent, node, { targetExtraClearance: 5 });
+    const endpoint = getClearedLineEndpoints(parent, node, { targetExtraClearance: getEdgeTargetExtraClearance(parent, node) });
     line.setAttribute('x1', endpoint.x1);
     line.setAttribute('y1', endpoint.y1);
     line.setAttribute('x2', endpoint.x2);
@@ -3390,6 +3460,10 @@ function replaceOccupant(node, months) {
 }
 
 function isMoralResistor(node) {
+  if (node && Object.prototype.hasOwnProperty.call(STATE.groundedOverrides, node.id)) {
+    return Boolean(STATE.groundedOverrides[node.id]);
+  }
+
   // Occupant-level trait, not a seat-level trait.
   // Modeling assumption: about 15% of broad workers are strong moral/empathetic resistors
   // (roughly a top-tail threshold, not a diagnostic claim). Leadership layers are lower
@@ -3704,7 +3778,8 @@ function getCacheKey() {
     orgSize: STATE.orgSize,
     controls: STATE.controls,
     forcedTypes: STATE.forcedTypes,
-    manualOverrides: STATE.manualOverrides
+    manualOverrides: STATE.manualOverrides,
+    groundedOverrides: STATE.groundedOverrides
   });
 }
 
@@ -3913,6 +3988,7 @@ function renderNode(node, force = false) {
     type,
     Boolean(resistorClass),
     Boolean(STATE.manualOverrides[node.id]),
+    Boolean(STATE.groundedOverrides[node.id]),
     firedEventThisMonth ? `f${STATE.timeMonths}` : '',
     turnoverEventThisMonth ? `t${STATE.timeMonths}` : '',
     shielded
@@ -3983,6 +4059,7 @@ function renderNode(node, force = false) {
       title.textContent =
         `${getRoleName(node)} · ${TYPE_NAMES[type]}` +
         `${STATE.manualOverrides[node.id] ? ' (manually set)' : ''}` +
+        `${STATE.groundedOverrides[node.id] ? ' (manually grounded)' : ''}` +
         `${parent ? `\nParent: ${TYPE_NAMES[parent.currentType]}` : ''}` +
         `${node.turnoverEvents && node.turnoverEvents.length ? `\nAttrition events: ${node.turnoverEvents.length}` : ''}` +
         `${node.firingEvents && node.firingEvents.length ? `\nFiring events: ${node.firingEvents.length}` : ''}` +
@@ -3995,7 +4072,7 @@ function renderNode(node, force = false) {
   }
 
   const pin = RENDER_INDEX.pins.get(node.id);
-  if (pin) pin.style.opacity = STATE.manualOverrides[node.id] ? '1' : '0';
+  if (pin) pin.style.opacity = (STATE.manualOverrides[node.id] || STATE.groundedOverrides[node.id]) ? '1' : '0';
 
   const specialLabel = RENDER_INDEX.specialLabels.get(node.id);
   if (specialLabel) {
@@ -4212,6 +4289,7 @@ function resetSimulationToScenario(scenarioId) {
   STATE.timeMonths = 0;
   STATE.forcedTypes = getScenarioForcedTypes(scenarioId);
   STATE.manualOverrides = {};
+  STATE.groundedOverrides = {};
   STATE.customMode = Boolean(scenario.custom);
   STATE.runSeed = 1;
   STATE.initialSeed = 1;
@@ -4361,19 +4439,33 @@ function handleTimeInput(value, animated = false) {
   }
 }
 
+function getCustomPlacementState(node) {
+  const manual = STATE.manualOverrides[node.id];
+  if (manual === 'T' || manual === 'I') return manual;
+  if (!manual && (node.currentType === 'T' || node.currentType === 'I')) return node.currentType;
+  if (STATE.groundedOverrides[node.id]) return 'R';
+  return 'N';
+}
+
 function handleNodeClick(node) {
   // Normal scenarios are read-only; clicking only customizes in Custom Placement.
   if (!STATE.customMode) return;
 
   stopPlayback();
 
-  const cur = STATE.manualOverrides[node.id] || node.currentType;
-  const next = cur === 'T' ? 'I' : cur === 'I' ? 'N' : 'T';
+  const cur = getCustomPlacementState(node);
+  const canAssignGrounded = !node.special;
+  const next = cur === 'T' ? 'I' : cur === 'I' ? 'N' : cur === 'N' && canAssignGrounded ? 'R' : 'T';
 
   if (next === 'T' && STATE.controls.darkTriad <= 0) {
     STATE.manualOverrides[node.id] = 'N';
+    delete STATE.groundedOverrides[node.id];
+  } else if (next === 'R') {
+    STATE.manualOverrides[node.id] = 'N';
+    STATE.groundedOverrides[node.id] = true;
   } else {
     STATE.manualOverrides[node.id] = next;
+    delete STATE.groundedOverrides[node.id];
   }
 
   recomputeAndRender(true);
@@ -4394,6 +4486,18 @@ function getDescendantIds(rootId) {
   return ids;
 }
 
+function getAncestorIds(rootId) {
+  const ids = new Set();
+  let node = NODE_MAP.get(rootId);
+
+  while (node) {
+    ids.add(node.id);
+    node = node.parentId ? NODE_MAP.get(node.parentId) : null;
+  }
+
+  return ids;
+}
+
 function setBranchSummary(text) {
   const el = document.getElementById('branch-summary');
   if (el) el.textContent = text;
@@ -4402,6 +4506,8 @@ function setBranchSummary(text) {
 function focusSubtree(rootId) {
   const svg = document.querySelector('svg.cascade');
   const ids = getDescendantIds(rootId);
+  const ancestorIds = getAncestorIds(rootId);
+  const focusEdgeIds = new Set([...ids, ...ancestorIds]);
   const root = NODE_MAP.get(rootId);
 
   document.querySelectorAll('.focus-node, .focus-edge, .focus-cluster, .focus-label, .focus-lane').forEach(el => {
@@ -4412,6 +4518,8 @@ function focusSubtree(rootId) {
     svg.classList.add('focus-mode');
     const nodeEl = document.querySelector(`[data-id="${rootId}"]`);
     if (nodeEl) nodeEl.classList.add('focus-node');
+    const boardLink = document.querySelector(`[data-parent="${rootId}"]`);
+    if (boardLink) boardLink.classList.add('focus-edge');
     setBranchSummary(
       `${root.roleName}
 ` +
@@ -4453,8 +4561,13 @@ function focusSubtree(rootId) {
     }
   });
 
-  // Walk up the focus root's ancestor chain. If we pass through a CXO before reaching the CEO,
-  // remember its id so the CEO drop + spine bar + spine→CXO arrow can highlight as one path.
+  ancestorIds.forEach(id => {
+    const nodeEl = document.querySelector(`[data-id="${id}"]`);
+    if (nodeEl) nodeEl.classList.add('focus-node');
+  });
+
+  // Walk up the focus root's ancestor chain. If we pass through a CXO before
+  // reaching the CEO, only that top-level route should light during drill-down.
   const rootIsCeo = rootId === '1';
   let chainCxoId = null;
   {
@@ -4465,19 +4578,30 @@ function focusSubtree(rootId) {
     }
   }
 
-  document.querySelectorAll('.edge').forEach(edge => {
+  document.querySelectorAll('.edge, .manager-ic-link').forEach(edge => {
     const child = edge.getAttribute('data-child');
-    if (ids.has(child)) edge.classList.add('focus-edge');
+    const parent = edge.getAttribute('data-parent');
+    if (focusEdgeIds.has(child)) edge.classList.add('focus-edge');
 
-    // Spine bar + CEO→spine drop carry the whole CEO↔C-suite manifold; light them when hovering
-    // the CEO or any node inside a CXO's subtree.
-    if ((edge.classList.contains('edge-spine') || edge.classList.contains('edge-ceo-spine')) &&
-        (rootIsCeo || chainCxoId)) {
+    // Keep drill-down focused: the shared CEO drop and full horizontal spine
+    // light only for CEO focus. CXO branches use hidden per-CXO spine segments.
+    if (edge.classList.contains('edge-ceo-spine') && rootIsCeo) {
       edge.classList.add('focus-edge');
     }
 
-    // The specific spine→CXO arrow for the CXO that owns the focused subtree.
-    if (chainCxoId && child === chainCxoId) edge.classList.add('focus-edge');
+    if (edge.classList.contains('edge-spine') && rootIsCeo) {
+      edge.classList.add('focus-edge');
+    }
+
+    if (chainCxoId && edge.getAttribute('data-spine-for') === chainCxoId) {
+      edge.classList.add('focus-edge');
+    }
+
+    // Manager-to-IC column connectors represent grouped edges, so they key by
+    // parent manager rather than a concrete child node id.
+    if (edge.classList.contains('manager-ic-link') && focusEdgeIds.has(parent)) {
+      edge.classList.add('focus-edge');
+    }
   });
 
   const resistantPockets = branchNodes.filter(n => !n.special && n.currentType === 'N' && isMoralResistor(n)).length;
@@ -4514,7 +4638,7 @@ function clearFocus() {
     el.classList.remove('focus-node', 'focus-edge', 'focus-cluster', 'focus-label', 'focus-lane');
   });
 
-  setBranchSummary('Hover to isolate a branch. In Custom Placement, click nodes — including Board and People / Legal / Compliance — to cycle red → purple → clean.');
+  setBranchSummary('Hover to isolate a branch. In Custom Placement, click people nodes to cycle red → purple → clean → grounded. Board cycles red → purple → clean.');
 }
 
 function updateInputHeat() {
@@ -4565,6 +4689,10 @@ function hardResetVisualState() {
     const node = NODE_MAP.get(id);
     el.classList.remove('compromised');
     if (node) el.textContent = node.roleName || 'Board';
+  });
+  document.querySelectorAll('[data-pin-for]').forEach(el => {
+    const id = el.getAttribute('data-pin-for');
+    el.style.opacity = (STATE.manualOverrides[id] || STATE.groundedOverrides[id]) ? '1' : '0';
   });
   invalidateRenderState();
 }
@@ -4624,7 +4752,7 @@ function bindInputTooltips() {
     ],
     grounded: [
       'Grounded Individual',
-      '<strong>A grounded individual is internally anchored under pressure.</strong> In the model, this means they are harder to capture, coerce, flatter, intimidate, or filter into toxic alignment. As VPs, directors, or managers, they lower capture risk below them, can shield direct reports under hostile bosses, and are more likely to remove trait-led direct reports when counterweights give them cover.'
+      '<strong>A grounded individual is internally anchored under pressure.</strong> In the model, this means they are harder to capture, coerce, flatter, intimidate, or filter into toxic alignment. As VPs, directors, or managers, they lower capture risk below them, can shield direct reports under hostile bosses, and are more likely to remove trait-led direct reports when counterweights give them cover. In Custom Placement mode, click a clean node once more to assign grounded status manually.'
     ],
     tipping: [
       'Capture vs. Accountability — Entropy Engine',
