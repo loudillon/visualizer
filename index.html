@@ -798,15 +798,13 @@
   }
 
   .tree-topbar {
-    display: grid;
-    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr);
+    display: flex;
     align-items: center;
-    gap: 6px;
     background: var(--bg-2);
     border: 1px solid var(--rule);
     border-radius: 7px;
     padding: 3px 7px;
-    min-height: 23px;
+    min-height: 22px;
   }
 
   .status {
@@ -1331,7 +1329,7 @@
     <div class="eyebrow">Organizational pathology · Dark Triad cascade</div>
     <h1>How a <em>few</em> shape the many.</h1>
     <p class="deck">
-      A simulator exposing how malevolent personality traits cascade influence through incentives, selection, turnover, and accountability systems.
+      A simulator exposing how malevolent personality traits cascade influence through incentives, selection, attrition, and accountability systems.
     </p>
   </header>
 
@@ -1369,7 +1367,7 @@
           <div class="legend-item has-help" data-help="neutral"><span class="dot dot-N"></span><span><strong>Neutral</strong></span></div>
           <div class="legend-item has-help" data-help="grounded"><span class="dot dot-R"></span><span><strong>Grounded individual</strong></span></div>
           <div class="legend-item"><span class="dot dot-S"></span><span><strong>Teal lines</strong> = grounded leader shielding direct reports</span></div>
-          <div class="legend-item"><span class="dot dot-O"></span><span><strong>Yellow flash</strong> = turnover</span></div>
+          <div class="legend-item"><span class="dot dot-O"></span><span><strong>Yellow flash</strong> = attrition</span></div>
           <div class="legend-item"><span class="dot dot-F"></span><span><strong>Dark red flash</strong> = firing</span></div>
           <div class="legend-item"><span class="dot dot-X"></span><span><strong>Exodus badge</strong> = branch under exodus pressure</span></div>
           <div class="legend-note">Hover the first four legend items for more context.</div>
@@ -1434,7 +1432,7 @@
             <div class="legend-item has-help" data-help="neutral"><span class="dot dot-N"></span><span><strong>Neutral</strong></span></div>
             <div class="legend-item has-help" data-help="grounded"><span class="dot dot-R"></span><span><strong>Grounded</strong></span></div>
             <div class="legend-item"><span class="dot dot-S"></span><span>Shielding</span></div>
-            <div class="legend-item"><span class="dot dot-O"></span><span>Turnover</span></div>
+            <div class="legend-item"><span class="dot dot-O"></span><span>Attrition</span></div>
             <div class="legend-item"><span class="dot dot-F"></span><span>Firing</span></div>
             <div class="legend-item"><span class="dot dot-X"></span><span>Exodus</span></div>
           </div>
@@ -1453,8 +1451,7 @@
       </div>
 
       <div class="tree-topbar">
-        <div class="status" id="status-line"><strong>Founder Rot</strong> - Year 0 - Small org - 250 people</div>
-        <div class="status" id="counts-line">Dark Triad 0 - Influenced 0 - Neutral 250</div>
+        <div class="status" id="status-line"><strong>Founder Rot</strong> · Small · 0y · 250 ppl · T0 I0 N250 · Capture — · CW 12/100</div>
       </div>
 
       <div class="tree-frame">
@@ -1725,6 +1722,7 @@ const STATE = {
   initialSeed: 1,
   effectiveCounterweights: SCENARIOS.founderRot.controls.counterweights,
   exodusTriggeredMonths: {},
+  exodusFlashNodes: {},
   oversightCollapseMonth: null,
   tippingByMonth: new Map(),
   tippingCrossedMonth: null,
@@ -1739,6 +1737,59 @@ const LEVELS = { 1: [], 1.5: [], 2: [], 3: [], 4: [], 5: [] };
 const SIM_LEVELS = [1, 1.5, 2, 3, 4, 5];
 const SIM_MONTHS = Array.from({ length: 61 }, (_, i) => i);
 const STATE_CACHE = new Map();
+const RENDER_INDEX = {
+  nodes: new Map(),
+  pins: new Map(),
+  specialLabels: new Map(),
+  cxoLabels: new Map(),
+  edgesByParent: new Map(),
+  clusters: new Map(),
+  clusterLabels: new Map(),
+  clusterBars: new Map(),
+  lanes: new Map(),
+  exodusBadges: new Map(),
+  exodusBadgeTexts: new Map(),
+  mobileExodusLabels: new Map()
+};
+
+function invalidateRenderState() {
+  for (const node of NODES) {
+    node._renderKey = null;
+    node._titleKey = null;
+  }
+}
+
+function indexRenderElements() {
+  Object.values(RENDER_INDEX).forEach(collection => collection.clear());
+
+  document.querySelectorAll('[data-id]').forEach(el => {
+    const id = el.getAttribute('data-id');
+    if (!RENDER_INDEX.nodes.has(id)) RENDER_INDEX.nodes.set(id, []);
+    RENDER_INDEX.nodes.get(id).push(el);
+  });
+
+  document.querySelectorAll('[data-pin-for]').forEach(el => RENDER_INDEX.pins.set(el.getAttribute('data-pin-for'), el));
+  document.querySelectorAll('[data-special-label-for]').forEach(el => RENDER_INDEX.specialLabels.set(el.getAttribute('data-special-label-for'), el));
+  document.querySelectorAll('[data-cxo-label-for]').forEach(el => RENDER_INDEX.cxoLabels.set(el.getAttribute('data-cxo-label-for'), el));
+  document.querySelectorAll('[data-cluster-for]').forEach(el => RENDER_INDEX.clusters.set(el.getAttribute('data-cluster-for'), el));
+  document.querySelectorAll('[data-cluster-label-for]').forEach(el => RENDER_INDEX.clusterLabels.set(el.getAttribute('data-cluster-label-for'), el));
+  document.querySelectorAll('[data-lane]').forEach(el => RENDER_INDEX.lanes.set(el.getAttribute('data-lane'), el));
+  document.querySelectorAll('[data-exodus-badge]').forEach(el => RENDER_INDEX.exodusBadges.set(el.getAttribute('data-exodus-badge'), el));
+  document.querySelectorAll('[data-exodus-badge-text]').forEach(el => RENDER_INDEX.exodusBadgeTexts.set(el.getAttribute('data-exodus-badge-text'), el));
+  document.querySelectorAll('[data-mobile-exodus]').forEach(el => RENDER_INDEX.mobileExodusLabels.set(el.getAttribute('data-mobile-exodus'), el));
+
+  document.querySelectorAll('[data-parent]').forEach(el => {
+    const parent = el.getAttribute('data-parent');
+    if (!RENDER_INDEX.edgesByParent.has(parent)) RENDER_INDEX.edgesByParent.set(parent, []);
+    RENDER_INDEX.edgesByParent.get(parent).push(el);
+  });
+
+  document.querySelectorAll('[data-cluster-bar-for][data-cluster-bar-type]').forEach(el => {
+    RENDER_INDEX.clusterBars.set(`${el.getAttribute('data-cluster-bar-for')}:${el.getAttribute('data-cluster-bar-type')}`, el);
+  });
+
+  invalidateRenderState();
+}
 
 function getDepartmentNames(count, config = ORG_CONFIG) {
   const selected = [];
@@ -2289,15 +2340,15 @@ function isShieldingLeaderAtRisk(leader) {
 
 function renderShieldingLeader(leader) {
   if (!leader || leader.level < 1.5 || leader.level > 4) return;
-  const cluster = document.querySelector(`[data-cluster-for="${leader.id}"]`);
-  const label = document.querySelector(`[data-cluster-label-for="${leader.id}"]`);
+  const cluster = RENDER_INDEX.clusters.get(leader.id);
+  const label = RENDER_INDEX.clusterLabels.get(leader.id);
   const shielded = getShieldingLeader(leader);
   if (cluster) cluster.classList.toggle('shielded-cluster', shielded);
   if (label) {
     label.classList.toggle('shielded-label', shielded);
   }
 
-  document.querySelectorAll(`[data-parent="${leader.id}"]`).forEach(edge => {
+  (RENDER_INDEX.edgesByParent.get(leader.id) || []).forEach(edge => {
     edge.classList.toggle('shielded-edge', shielded);
   });
 }
@@ -2730,6 +2781,7 @@ function setOrgSize(sizeId) {
   buildTree();
   buildStaticSvg();
   buildMobileSvg();
+  indexRenderElements();
   buildOrgSizeControls();
   hardResetVisualState();
   recomputeAndRender(false);
@@ -3188,11 +3240,12 @@ function buildMobileSvg() {
 function updateBranchExodusVisuals() {
   for (let lane = 0; lane < ORG_CONFIG.vps; lane++) {
     const metrics = getBranchMetrics(lane);
-    const laneRect = document.querySelector(`[data-lane="${lane}"]`);
-    const badge = document.querySelector(`[data-exodus-badge="${lane}"]`);
-    const badgeText = document.querySelector(`[data-exodus-badge-text="${lane}"]`);
-    const mobileVp = document.querySelector(`svg.mobile-cascade [data-id="2-${lane}"]`);
-    const mobileLabel = document.querySelector(`[data-mobile-exodus="${lane}"]`);
+    const laneKey = String(lane);
+    const laneRect = RENDER_INDEX.lanes.get(laneKey);
+    const badge = RENDER_INDEX.exodusBadges.get(laneKey);
+    const badgeText = RENDER_INDEX.exodusBadgeTexts.get(laneKey);
+    const mobileVp = (RENDER_INDEX.nodes.get(`2-${lane}`) || []).find(el => el.ownerSVGElement && el.ownerSVGElement.classList.contains('mobile-cascade'));
+    const mobileLabel = RENDER_INDEX.mobileExodusLabels.get(laneKey);
     const triggeredMonth = STATE.exodusTriggeredMonths[lane];
     const monthsSinceTrigger = triggeredMonth == null ? 0 : Math.max(0, STATE.timeMonths - triggeredMonth);
     const fadeMonths = 18;
@@ -3203,8 +3256,7 @@ function updateBranchExodusVisuals() {
       laneRect.classList.toggle('lane-exodus', exodusOpacity > 0);
       if (triggeredMonth === STATE.timeMonths) {
         laneRect.classList.remove('lane-exodus-flash');
-        void laneRect.getBoundingClientRect();
-        laneRect.classList.add('lane-exodus-flash');
+        requestAnimationFrame(() => laneRect.classList.add('lane-exodus-flash'));
       } else {
         laneRect.classList.remove('lane-exodus-flash');
       }
@@ -3215,8 +3267,7 @@ function updateBranchExodusVisuals() {
       badge.classList.toggle('visible', exodusOpacity > 0);
       if (triggeredMonth === STATE.timeMonths) {
         badge.classList.remove('lane-exodus-flash');
-        void badge.getBoundingClientRect();
-        badge.classList.add('lane-exodus-flash');
+        requestAnimationFrame(() => badge.classList.add('lane-exodus-flash'));
       } else {
         badge.classList.remove('lane-exodus-flash');
       }
@@ -3231,8 +3282,7 @@ function updateBranchExodusVisuals() {
       mobileVp.classList.toggle('mobile-exodus-node', exodusOpacity > 0);
       if (triggeredMonth === STATE.timeMonths) {
         mobileVp.classList.remove('lane-exodus-flash');
-        void mobileVp.getBoundingClientRect();
-        mobileVp.classList.add('lane-exodus-flash');
+        requestAnimationFrame(() => mobileVp.classList.add('lane-exodus-flash'));
       } else {
         mobileVp.classList.remove('lane-exodus-flash');
       }
@@ -3798,6 +3848,28 @@ function computeTippingPoint(months) {
   return { T, influence, accountability, regime };
 }
 
+function recordMonthlyDerivedState(months) {
+  for (let lane = 0; lane < ORG_CONFIG.vps; lane++) {
+    if (STATE.exodusTriggeredMonths[lane] == null && getBranchMetrics(lane).exodusTriggered) {
+      STATE.exodusTriggeredMonths[lane] = months;
+      STATE.exodusFlashNodes[months] = [
+        ...(STATE.exodusFlashNodes[months] || []),
+        ...getExodusFlashNodeIds(lane, months)
+      ];
+    }
+  }
+
+  if (STATE.oversightCollapseMonth == null && getEffectiveCounterweights() <= 0) {
+    STATE.oversightCollapseMonth = months;
+  }
+
+  const tipping = computeTippingPoint(months);
+  STATE.tippingByMonth.set(months, tipping);
+  if (STATE.tippingCrossedMonth == null && tipping.T >= 1) {
+    STATE.tippingCrossedMonth = months;
+  }
+}
+
 function computeAllNodeTypes() {
   const target = Number(STATE.timeMonths) || 0;
   resetRuntimeState();
@@ -3807,34 +3879,21 @@ function computeAllNodeTypes() {
     if (months > target) break;
     STATE.timeMonths = months;
     computeOneMonthStep(months);
-
-    for (let lane = 0; lane < ORG_CONFIG.vps; lane++) {
-      if (STATE.exodusTriggeredMonths[lane] == null && getBranchMetrics(lane).exodusTriggered) {
-        STATE.exodusTriggeredMonths[lane] = months;
-        STATE.exodusFlashNodes[months] = [
-          ...(STATE.exodusFlashNodes[months] || []),
-          ...getExodusFlashNodeIds(lane, months)
-        ];
-      }
-    }
-
-    if (STATE.oversightCollapseMonth == null && getEffectiveCounterweights() <= 0) {
-      STATE.oversightCollapseMonth = months;
-    }
-
-    const tipping = computeTippingPoint(months);
-    STATE.tippingByMonth.set(months, tipping);
-    if (STATE.tippingCrossedMonth == null && tipping.T >= 1) {
-      STATE.tippingCrossedMonth = months;
-    }
+    recordMonthlyDerivedState(months);
   }
 
   STATE.timeMonths = target;
 }
 
-function renderNode(node) {
+function advanceOneMonthInPlace(months) {
+  STATE.timeMonths = months;
+  computeOneMonthStep(months);
+  recordMonthlyDerivedState(months);
+}
+
+function renderNode(node, force = false) {
   const type = node.currentType;
-  const elements = Array.from(document.querySelectorAll(`[data-id="${node.id}"]`));
+  const elements = RENDER_INDEX.nodes.get(node.id) || [];
   if (!elements.length) return;
   const firedEventThisMonth = node.firingEvents && node.firingEvents.find(evt => evt.months === STATE.timeMonths);
   const turnoverEventThisMonth = node.turnoverEvents && node.turnoverEvents.find(evt => evt.months === STATE.timeMonths);
@@ -3849,6 +3908,18 @@ function renderNode(node) {
       : isDenseDesktopMode() && node.level === 4 ? 'node manager-dot'
         : 'node leader';
   const resistorClass = !node.special && type === 'N' && isMoralResistor(node) && !suppressGroundedDuringReplacement ? ' grounded-individual' : '';
+  const shielded = node.level >= 1.5 && node.level <= 4 ? getShieldingLeader(node) : false;
+  const renderKey = [
+    type,
+    Boolean(resistorClass),
+    Boolean(STATE.manualOverrides[node.id]),
+    firedEventThisMonth ? `f${STATE.timeMonths}` : '',
+    turnoverEventThisMonth ? `t${STATE.timeMonths}` : '',
+    shielded
+  ].join('|');
+
+  if (!force && node._renderKey === renderKey) return;
+  node._renderKey = renderKey;
 
   const fills = {
     T: '#C73E2E',
@@ -3895,7 +3966,6 @@ function renderNode(node) {
     // neutral frame boundary, which makes SVG animations reliably restart.
     el.classList.remove('turnover-flash', 'fire-flash');
     if (firedEventThisMonth || turnoverEventThisMonth) {
-      void el.getBoundingClientRect();
       requestAnimationFrame(() => {
         if (firedEventThisMonth) {
           el.classList.add('fire-flash');
@@ -3907,25 +3977,27 @@ function renderNode(node) {
     }
 
     const title = el.querySelector('title');
-    if (title) {
+    const titleKey = `${renderKey}|${node.turnoverEvents ? node.turnoverEvents.length : 0}|${node.firingEvents ? node.firingEvents.length : 0}`;
+    if (title && (force || title._titleKey !== titleKey)) {
       const parent = node.parentId ? NODE_MAP.get(node.parentId) : null;
       title.textContent =
         `${getRoleName(node)} · ${TYPE_NAMES[type]}` +
         `${STATE.manualOverrides[node.id] ? ' (manually set)' : ''}` +
         `${parent ? `\nParent: ${TYPE_NAMES[parent.currentType]}` : ''}` +
-        `${node.turnoverEvents && node.turnoverEvents.length ? `\nTurnover events: ${node.turnoverEvents.length}` : ''}` +
+        `${node.turnoverEvents && node.turnoverEvents.length ? `\nAttrition events: ${node.turnoverEvents.length}` : ''}` +
         `${node.firingEvents && node.firingEvents.length ? `\nFiring events: ${node.firingEvents.length}` : ''}` +
         `${getShieldingLeader(node) ? `\nLeader is actively shielding direct reports` : ''}` +
         `${!node.special && isMoralResistor(node) ? `\nCurrent occupant: grounded / high-integrity resistance` : ''}` +
         `${node.id === OVERSIGHT_NODE_ID ? `\nEffective counterweights: ${getEffectiveCounterweights()} / 100` : ''}` +
         `${node.id === BOARD_NODE_ID ? `\nThis node can police or fail to police oversight.` : ''}`;
+      title._titleKey = titleKey;
     }
   }
 
-  const pin = document.querySelector(`[data-pin-for="${node.id}"]`);
+  const pin = RENDER_INDEX.pins.get(node.id);
   if (pin) pin.style.opacity = STATE.manualOverrides[node.id] ? '1' : '0';
 
-  const specialLabel = document.querySelector(`[data-special-label-for="${node.id}"]`);
+  const specialLabel = RENDER_INDEX.specialLabels.get(node.id);
   if (specialLabel) {
     specialLabel.classList.toggle('compromised', type === 'T' || type === 'I');
     specialLabel.textContent = node.id === BOARD_NODE_ID
@@ -3933,7 +4005,7 @@ function renderNode(node) {
       : `${node.roleName || 'Board'} · ${type === 'T' ? 'trait-led' : type === 'I' ? 'captured' : 'neutral'}`;
   }
 
-  const cxoLabel = document.querySelector(`[data-cxo-label-for="${node.id}"]`);
+  const cxoLabel = RENDER_INDEX.cxoLabels.get(node.id);
   if (cxoLabel) {
     cxoLabel.classList.toggle('compromised', type === 'T' || type === 'I');
     if (node.level === CSUITE_LEVEL) cxoLabel.textContent = getCxoLabel(node);
@@ -3943,8 +4015,8 @@ function renderNode(node) {
 }
 
 function renderAggregateCluster(owner) {
-  const shell = document.querySelector(`[data-cluster-for="${owner.id}"]`);
-  const label = document.querySelector(`[data-cluster-label-for="${owner.id}"]`);
+  const shell = RENDER_INDEX.clusters.get(owner.id);
+  const label = RENDER_INDEX.clusterLabels.get(owner.id);
   if (!shell && !label) return;
 
   const members = getAggregateMembers(owner);
@@ -3954,7 +4026,7 @@ function renderAggregateCluster(owner) {
   const maxBarWidth = Math.max(4, shellWidth - 8);
 
   TYPE_ORDER.forEach(type => {
-    const bar = document.querySelector(`[data-cluster-bar-for="${owner.id}"][data-cluster-bar-type="${type}"]`);
+    const bar = RENDER_INDEX.clusterBars.get(`${owner.id}:${type}`);
     if (!bar) return;
     bar.setAttribute('width', Math.max(0, maxBarWidth * (counts[type] / total)));
   });
@@ -3974,13 +4046,8 @@ function renderAggregateClusters() {
   }
 }
 
-function reconcileSvgToModel() {
-  const modelIds = new Set(NODES.map(node => node.id));
-  document.querySelectorAll('[data-id]').forEach(el => {
-    if (!modelIds.has(el.getAttribute('data-id'))) el.remove();
-  });
-
-  for (const node of NODES) renderNode(node);
+function reconcileSvgToModel(force = false) {
+  for (const node of NODES) renderNode(node, force);
   renderAggregateClusters();
 }
 
@@ -4039,11 +4106,32 @@ function updateUiText() {
   const oversightState = oversight ? (oversight.currentType === 'T' ? 'trait-led' : oversight.currentType === 'I' ? 'captured' : 'neutral') : 'n/a';
   const boardState = board ? (board.currentType === 'T' ? 'trait-led' : board.currentType === 'I' ? 'captured' : 'neutral') : 'n/a';
 
-  document.getElementById('status-line').innerHTML =
-    `${STATE.customMode ? '<strong>Custom Placement</strong> - Click nodes to set red/purple/neutral - ' : `<strong>${scenario.name}</strong> - `}Run ${STATE.runSeed} - ${timeText} - ${ORG_CONFIG.name} org - Leadership DT ${STATE.controls.darkTriad}% - People/Legal/Compliance ${oversightState} - Board ${boardState} - Effective counterweights ${effectiveCounterweights}/100 - ${getTotalPeople()} people`;
+  const tipping = STATE.tippingByMonth.get(STATE.timeMonths);
+  const captureShare = tipping && tipping.T > 0 ? Math.round((tipping.T / (tipping.T + 1)) * 100) : 0;
+  const captureText = tipping && tipping.T > 0
+    ? `${captureShare}%${tipping.regime === 'predatory' ? ' <strong style="color:var(--trait)">Predatory</strong>' : ''}`
+    : '—';
+  const cwSuffix = effectiveCounterweights === 0
+    ? ' <strong style="color:var(--trait)">collapsed</strong>'
+    : effectiveCounterweights < STATE.controls.counterweights
+      ? ' degraded'
+      : '';
+  const govSuffix = (oversightState !== 'neutral' || boardState !== 'neutral')
+    ? ` · Oversight ${oversightState} · Board ${boardState}`
+    : '';
+  const head = STATE.customMode
+    ? `<strong>Custom Placement</strong>`
+    : `<strong>${scenario.name}</strong>`;
 
-  document.getElementById('counts-line').textContent =
-    `Dark Triad ${counts.T} · Influenced ${counts.I} · Neutral / grounded ${counts.N} · Turnover events ${getTurnoverEventCount()} · Firings ${getFiringEventCount()} · Exodus branches ${getExodusBranchCount()}${effectiveCounterweights === 0 ? ' · Accountability collapsed' : effectiveCounterweights < STATE.controls.counterweights ? ' · Accountability severely degraded' : ''}`;
+  document.getElementById('status-line').innerHTML =
+    `${head} · ${ORG_CONFIG.name} · ${timeText} · ${getTotalPeople()} ppl` +
+    ` · T${counts.T} I${counts.I} N${counts.N}` +
+    ` · Capture ${captureText}` +
+    ` · CW ${effectiveCounterweights}/100${cwSuffix}` +
+    ` · <span title="Attrition — voluntary departures cumulative">⟲${getTurnoverEventCount()}</span>` +
+    ` <span title="Firings — involuntary removals cumulative">✕${getFiringEventCount()}</span>` +
+    ` <span title="Exodus branches — lanes hemorrhaging grounded staff">⤴${getExodusBranchCount()}</span>` +
+    govSuffix;
 
   document.getElementById('timeMonths').value = STATE.timeMonths;
   document.getElementById('timeMonths-val').textContent = timeText;
@@ -4057,9 +4145,13 @@ function updateUiText() {
   } else if (STATE.timeMonths <= 24) {
     note.textContent = 'Year 1-2: leaders begin selecting reports who fit the local culture. Grounded neutral VPs, directors, and managers under hostile bosses attempt to shield their direct reports; counterweights make that easier, operating pressure makes it harder. Shielding persists until that leader is fired, turns over, or is manually changed - and it raises their own risk.';
   } else if (STATE.timeMonths <= 36) {
-    note.textContent = 'Year 2–3: hiring, promotion, and turnover begin changing who remains. Toxic branches now build exodus pressure gradually; once it gets high enough, neutral people start leaving in waves instead of tripping a cartoon cliff.';
+    note.textContent = 'Year 2–3: hiring, promotion, and attrition begin changing who remains. Toxic branches now build exodus pressure gradually; once it gets high enough, neutral people start leaving in waves instead of tripping a cartoon cliff.';
   } else {
-    note.textContent = 'Years 3-5: turnover compounds, exodus pressure can hollow out toxic branches, grounded leaders can shield teams, reduce capture below them, and remove trait-led direct reports when the system gives them cover.';
+    note.textContent = 'Years 3-5: attrition compounds, exodus pressure can hollow out toxic branches, grounded leaders can shield teams, reduce capture below them, and remove trait-led direct reports when the system gives them cover.';
+  }
+
+  if (STATE.tippingCrossedMonth != null && STATE.timeMonths >= STATE.tippingCrossedMonth) {
+    note.textContent += ` Capture overtook accountability at month ${STATE.tippingCrossedMonth} — the org has tipped: grounded hires get filtered out, trait-led and captured occupants stick, and grounded staff leak.`;
   }
 
   if (STATE.tippingCrossedMonth != null && STATE.timeMonths >= STATE.tippingCrossedMonth) {
@@ -4070,6 +4162,16 @@ function updateUiText() {
   updateTippingReadout();
 }
 
+function updateTimeScrubText() {
+  const timeText = formatTime(STATE.timeMonths);
+  const timeInput = document.getElementById('timeMonths');
+  const timeValue = document.getElementById('timeMonths-val');
+  const timeLabel = document.getElementById('time-label');
+  if (timeInput) timeInput.value = STATE.timeMonths;
+  if (timeValue) timeValue.textContent = timeText;
+  if (timeLabel) timeLabel.textContent = timeText;
+}
+
 function updateTippingReadout() {
   const mark = document.getElementById('tipping-fill');
   const label = document.getElementById('tipping-val');
@@ -4077,6 +4179,7 @@ function updateTippingReadout() {
   if (!mark || !label || !row) return;
 
   const tipping = STATE.tippingByMonth.get(STATE.timeMonths);
+  if (!tipping) return;
   const T = tipping ? tipping.T : 0;
   const regime = tipping ? tipping.regime : 'stable';
 
@@ -4194,6 +4297,8 @@ function playSimulation() {
   for (const timer of STATE.renderTimers) clearTimeout(timer);
   STATE.renderTimers = [];
   STATE.renderToken++;
+  computeAllNodeTypes();
+  renderAllNodes(false);
 
   let month = Number(STATE.timeMonths) || 0;
 
@@ -4205,11 +4310,10 @@ function playSimulation() {
       return;
     }
 
-    STATE.timeMonths = month;
-
-    // During playback, render immediately without the tier cascade.
-    // The month-to-month color changes are the animation; pacing carries the drama.
-    recomputeAndRender(false);
+    // During playback, step the already-computed timeline forward by one month.
+    // Scrubbing still uses full recompute; play avoids reprocessing month 0..N every tick.
+    advanceOneMonthInPlace(month);
+    renderAllNodes(false);
 
     if (month >= 60) {
       STATE.playbackTimer = setTimeout(stopPlayback, 700);
@@ -4253,7 +4357,7 @@ function handleTimeInput(value, animated = false) {
     recomputeAndRender(true);
   } else {
     STATE.computeDebounce = setTimeout(() => recomputeAndRender(false), 70);
-    updateUiText();
+    updateTimeScrubText();
   }
 }
 
@@ -4390,7 +4494,7 @@ function focusSubtree(rootId) {
 ` +
     `Influenced: ${counts.I}
 ` +
-    `Turnover events: ${getTurnoverEventCount(ids)}\n` +
+    `Attrition events: ${getTurnoverEventCount(ids)}\n` +
     `Firing events: ${getFiringEventCount(ids)}\n` +
     `Neutral / grounded: ${counts.N}\n` +
     `Grounded occupants: ${resistantPockets}
@@ -4462,6 +4566,7 @@ function hardResetVisualState() {
     el.classList.remove('compromised');
     if (node) el.textContent = node.roleName || 'Board';
   });
+  invalidateRenderState();
 }
 
 function newRun() {
@@ -4499,7 +4604,7 @@ function bindInputTooltips() {
     ],
     operatingPressure: [
       'Operating Pressure',
-      '<strong>Doctrine, incentives, hiring, and promotion pressure.</strong> This combines the company’s excuse system with what it actually rewards. Low means stakeholder norms, balanced rewards, and real concern for harm. High means ends-justify-means doctrine, financial extraction pressure, promotions for hard-charging behavior, selection for loyal/aligned replacements, and weak concern for turnover, retaliation, or quality damage.'
+      '<strong>Doctrine, incentives, hiring, and promotion pressure.</strong> This combines the company’s excuse system with what it actually rewards. Low means stakeholder norms, balanced rewards, and real concern for harm. High means ends-justify-means doctrine, financial extraction pressure, promotions for hard-charging behavior, selection for loyal/aligned replacements, and weak concern for attrition, retaliation, or quality damage.'
     ],
     counterweights: [
       'Accountability / Counterweights',
@@ -4582,6 +4687,7 @@ function init() {
   buildOrgSizeControls();
   buildStaticSvg();
   buildMobileSvg();
+  indexRenderElements();
   bindControls();
   bindInputTooltips();
   syncControlsToState();
