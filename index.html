@@ -1362,7 +1362,7 @@
         <div class="panel-title">Legend</div>
         <div class="legend">
           <div class="legend-item has-help" data-help="darkTriadState"><span class="dot dot-T"></span><span><strong>Dark Triad</strong></span></div>
-          <div class="legend-item has-help" data-help="capturedBehavior"><span class="dot dot-I"></span><span><strong>Captured behavior</strong></span></div>
+          <div class="legend-item has-help" data-help="capturedBehavior"><span class="dot dot-I"></span><span><strong>Captured / deferential</strong></span></div>
           <div class="legend-item has-help" data-help="neutral"><span class="dot dot-N"></span><span><strong>Neutral</strong></span></div>
           <div class="legend-item has-help" data-help="grounded"><span class="dot dot-R"></span><span><strong>Grounded individual</strong></span></div>
           <div class="legend-item"><span class="dot dot-S"></span><span><strong>Teal lines</strong> = grounded leader shielding direct reports</span></div>
@@ -1427,7 +1427,7 @@
           <div class="chart-dock-title">Legend</div>
           <div class="legend chart-legend">
             <div class="legend-item has-help" data-help="darkTriadState"><span class="dot dot-T"></span><span><strong>Dark Triad</strong></span></div>
-            <div class="legend-item has-help" data-help="capturedBehavior"><span class="dot dot-I"></span><span><strong>Captured</strong></span></div>
+            <div class="legend-item has-help" data-help="capturedBehavior"><span class="dot dot-I"></span><span><strong>Captured / deferential</strong></span></div>
             <div class="legend-item has-help" data-help="neutral"><span class="dot dot-N"></span><span><strong>Neutral</strong></span></div>
             <div class="legend-item has-help" data-help="grounded"><span class="dot dot-R"></span><span><strong>Grounded</strong></span></div>
             <div class="legend-item"><span class="dot dot-S"></span><span>Shielding</span></div>
@@ -1563,6 +1563,39 @@ const TYPE_NAMES = {
   N: 'Neutral / grounded'
 };
 
+function getGovernanceStateLabel(node, { short = false } = {}) {
+  if (!node) return 'n/a';
+  if (node.id === BOARD_NODE_ID) {
+    if (node.currentType === 'T') return short ? 'captured' : 'captured / conflicted';
+    if (node.currentType === 'I') return short ? 'deferential' : 'deferential / passive';
+    return short ? 'independent' : 'independent';
+  }
+  if (node.id === OVERSIGHT_NODE_ID) {
+    if (node.currentType === 'T') return short ? 'trait-led' : 'trait-led oversight';
+    if (node.currentType === 'I') return short ? 'captured' : 'captured / aligned';
+    return short ? 'active' : 'active / independent';
+  }
+  return TYPE_NAMES[node.currentType] || 'n/a';
+}
+
+function getNodeStateLabel(node) {
+  if (!node) return 'n/a';
+  if (node.id === BOARD_NODE_ID || node.id === OVERSIGHT_NODE_ID) return getGovernanceStateLabel(node);
+  return TYPE_NAMES[node.currentType] || 'n/a';
+}
+
+function getGovernanceSummary(oversight, board, effectiveCounterweights) {
+  const oversightState = getGovernanceStateLabel(oversight, { short: true });
+  const boardState = getGovernanceStateLabel(board, { short: true });
+  const base = STATE.controls.counterweights || 0;
+  const degradation = base > 0 ? Math.round((1 - effectiveCounterweights / base) * 100) : 0;
+
+  if (!oversight || !board) return '';
+  if (oversight.currentType === 'N' && board.currentType === 'N') return '';
+
+  return ` · Governance: oversight ${oversightState}, board ${boardState}, CW -${Math.max(0, degradation)}%`;
+}
+
 const TYPE_ORDER = ['T', 'I', 'N'];
 const BASE_DEPARTMENT_NAMES = ['Sales', 'Product', 'Engineering', 'Operations', 'Finance', 'Marketing', 'Customer', 'Data', 'Security', 'Support', 'Research', 'People / Legal / Compliance'];
 const CSUITE_CCO_ID = 'csuite-cco';
@@ -1652,9 +1685,9 @@ const SCENARIOS = {
     id: 'founderRot',
     name: 'Founder Rot',
     short: 'Elevated leadership DT rate; the system rewards imitation.',
-    controls: { darkTriad: 14, operatingPressure: 89, counterweights: 12 },
+    controls: { darkTriad: 9, operatingPressure: 89, counterweights: 12 },
     forcedTypes: { '1': 'T' },
-    executiveBias: 1.15
+    executiveBias: 1.05
   },
   cleanDirty: {
     id: 'cleanDirty',
@@ -1668,25 +1701,25 @@ const SCENARIOS = {
     id: 'toxicVpIsland',
     name: 'Toxic VP Island',
     short: 'One VP is red; their branch selects downward.',
-    controls: { darkTriad: 8, operatingPressure: 53, counterweights: 44 },
+    controls: { darkTriad: 6, operatingPressure: 53, counterweights: 44 },
     forcedTypes: { '1': 'N', '2-2': 'T' },
-    executiveBias: 0.95
+    executiveBias: 0.90
   },
   hangover: {
     id: 'hangover',
     name: 'Post-Founder Hangover',
     short: 'The founder is gone, but old harmful doctrine and extraction incentives remain.',
-    controls: { darkTriad: 10, operatingPressure: 82, counterweights: 24 },
+    controls: { darkTriad: 7, operatingPressure: 82, counterweights: 24 },
     forcedTypes: { '1': 'N', '2-1': 'I', '2-3': 'I' },
-    executiveBias: 1.05
+    executiveBias: 1.00
   },
   compromisedOversight: {
     id: 'compromisedOversight',
     name: 'Compromised Oversight',
     short: 'Formal safeguards look strong, but oversight is compromised, so accountability collapses.',
-    controls: { darkTriad: 6, operatingPressure: 74, counterweights: 82 },
+    controls: { darkTriad: 5, operatingPressure: 74, counterweights: 82 },
     forcedTypes: { '1': 'N', '2-4': 'I', 'board': 'N' },
-    executiveBias: 0.92
+    executiveBias: 0.90
   },
   customPlacement: {
     id: 'customPlacement',
@@ -2283,20 +2316,18 @@ function getGovernanceStates() {
 
 function getEffectiveCounterweights() {
   const { oversightType, boardType } = getGovernanceStates();
-  const oversightCompromised = oversightType === 'T' || oversightType === 'I';
-  const boardCompromised = boardType === 'T' || boardType === 'I';
 
   let multiplier = 1;
-  if (oversightCompromised && boardCompromised) {
+  if (oversightType === 'T' && boardType === 'T') {
     multiplier = 0;
   } else if (oversightType === 'I') {
-    multiplier = boardType === 'N' ? 0.32 : 0;
+    multiplier = boardType === 'N' ? 0.32 : boardType === 'I' ? 0.12 : 0.04;
   } else if (oversightType === 'T') {
-    multiplier = boardType === 'N' ? 0.18 : 0;
+    multiplier = boardType === 'N' ? 0.18 : boardType === 'I' ? 0.06 : 0;
   } else if (boardType === 'I') {
-    multiplier = 0.92;
+    multiplier = 0.90;
   } else if (boardType === 'T') {
-    multiplier = 0.84;
+    multiplier = 0.78;
   }
 
   const value = Math.round(STATE.controls.counterweights * multiplier);
@@ -2443,7 +2474,7 @@ function computeBoardType(months) {
   }
 
   if (prior === 'I') {
-    const recoveryChance = Math.max(0, (STATE.controls.counterweights - 78) / 120);
+    const recoveryChance = Math.max(0, (STATE.controls.counterweights - 82) / 180);
     if (runRandom(node.occupantSeed, 601 + months) >= recoveryChance) {
       node.currentType = 'I';
       return;
@@ -2453,9 +2484,9 @@ function computeBoardType(months) {
   if (months === 0) {
     const redChance = STATE.controls.darkTriad <= 0 ? 0 : Math.max(0, Math.min(0.14,
       STATE.controls.darkTriad / 100 * 0.55 +
-      operatingPressure * 0.06 +
-      (ceoType === 'T' ? 0.05 : 0) -
-      rawCounterweights * 0.10
+      operatingPressure * 0.025 +
+      (ceoType === 'T' ? 0.075 : 0) -
+      rawCounterweights * 0.14
     ));
 
     if (initialRandom(node.occupantSeed, 610) < redChance) {
@@ -2465,16 +2496,16 @@ function computeBoardType(months) {
 
     const capturedChance = Math.max(0, Math.min(0.50,
       0.03 +
-      operatingPressure * 0.20 +
-      (ceoType === 'T' ? 0.08 : ceoType === 'I' ? 0.04 : 0) -
-      rawCounterweights * 0.12
+      operatingPressure * 0.10 +
+      (ceoType === 'T' ? 0.13 : ceoType === 'I' ? 0.05 : 0) -
+      rawCounterweights * 0.18
     ));
 
     node.currentType = initialRandom(node.occupantSeed, 611) < capturedChance ? 'I' : 'N';
     return;
   }
 
-  const capturePressure = 0.02 + operatingPressure * 0.18 + (ceoType === 'T' ? 0.08 : ceoType === 'I' ? 0.04 : 0) - rawCounterweights * 0.12;
+  const capturePressure = 0.02 + operatingPressure * 0.08 + (ceoType === 'T' ? 0.12 : ceoType === 'I' ? 0.05 : 0) - rawCounterweights * 0.18;
   if (capturePressure > 0.18 && runRandom(node.occupantSeed, 612 + months) < Math.min(0.42, capturePressure)) {
     node.currentType = 'I';
     return;
@@ -3401,7 +3432,7 @@ function parentInfluencePressure(type) {
   return 0.055;
 }
 
-function computeTraitType(node, parent) {
+function computeTraitType(node) {
   // Trait carrier assignment is for initial conditions only.
   // Monthly cultural spread is purple/turnover; red only enters later through replacement hiring.
   const scenario = SCENARIOS[STATE.scenarioId];
@@ -3409,39 +3440,9 @@ function computeTraitType(node, parent) {
   // Sandbox rule: allow 0% even if unrealistic.
   if (STATE.controls.darkTriad <= 0) return false;
 
-  const years = STATE.timeMonths / 12;
-  const timeline = STATE.timeMonths / 60;
-  const operatingPressure = STATE.controls.operatingPressure / 100;
-
   // Start from level-specific base rate:
   // ~1% workforce, slider-controlled leadership rate, interpolated for directors/managers.
   let chance = darkTriadRateForLevel(node.level) * roleTraitMultiplier(node.level) * (scenario.executiveBias || 1);
-
-  // Red bosses can select, hire, protect, and promote similar people beneath them.
-  // This is strongest for leadership layers, weaker for ICs.
-  if (parent && parent.currentType === 'T') {
-    if (node.level === 2) chance += 0.025 * timeline;
-    if (node.level === 3) chance += 0.040 * timeline;
-    if (node.level === 4) chance += 0.055 * timeline;
-    if (node.level === 5) chance += 0.006 * timeline;
-  } else if (parent && parent.currentType === 'I') {
-    if (node.level === 3) chance += 0.010 * timeline;
-    if (node.level === 4) chance += 0.020 * timeline;
-    if (node.level === 5) chance += 0.004 * timeline;
-    chance *= 0.88;
-  } else if (parent && parent.currentType === 'N') {
-    chance *= 0.45;
-  }
-
-  // Toxic directors remaining in place can hire/select red managers over time.
-  if (node.level === 4 && parent && parent.level === 3 && parent.currentType === 'T') {
-    chance += (0.025 + operatingPressure * 0.040) * timeline;
-  }
-
-  // Attrition/selection compounding after year 2, bounded.
-  if (years >= 2 && parent && (parent.currentType === 'T' || parent.currentType === 'I') && node.level <= 4) {
-    chance += Math.min(0.035, years * 0.006);
-  }
 
   // Caps keep red rare but concentrated; purple carries most cultural spread.
   const cap = node.level <= 2 ? 0.18 : node.level === 3 ? 0.12 : node.level === 4 ? 0.075 : 0.015;
@@ -3847,7 +3848,7 @@ function computeOneMonthStep(months) {
 
       // Initial red assignment only. Existing people do not magically become Dark Triad
       // every month. Additional red nodes enter through turnover/replacement selection.
-      if (months === 0 && computeTraitType(node, parent)) {
+      if (months === 0 && computeTraitType(node)) {
         node.currentType = 'T';
         continue;
       }
@@ -4057,16 +4058,16 @@ function renderNode(node, force = false) {
     if (title && (force || title._titleKey !== titleKey)) {
       const parent = node.parentId ? NODE_MAP.get(node.parentId) : null;
       title.textContent =
-        `${getRoleName(node)} · ${TYPE_NAMES[type]}` +
+        `${getRoleName(node)} · ${getNodeStateLabel(node)}` +
         `${STATE.manualOverrides[node.id] ? ' (manually set)' : ''}` +
         `${STATE.groundedOverrides[node.id] ? ' (manually grounded)' : ''}` +
-        `${parent ? `\nParent: ${TYPE_NAMES[parent.currentType]}` : ''}` +
+        `${parent ? `\nParent: ${getNodeStateLabel(parent)}` : ''}` +
         `${node.turnoverEvents && node.turnoverEvents.length ? `\nAttrition events: ${node.turnoverEvents.length}` : ''}` +
         `${node.firingEvents && node.firingEvents.length ? `\nFiring events: ${node.firingEvents.length}` : ''}` +
         `${getShieldingLeader(node) ? `\nLeader is actively shielding direct reports` : ''}` +
         `${!node.special && isMoralResistor(node) ? `\nCurrent occupant: grounded / high-integrity resistance` : ''}` +
         `${node.id === OVERSIGHT_NODE_ID ? `\nEffective counterweights: ${getEffectiveCounterweights()} / 100` : ''}` +
-        `${node.id === BOARD_NODE_ID ? `\nThis node can police or fail to police oversight.` : ''}`;
+        `${node.id === BOARD_NODE_ID ? `\nDeferential means passive or information-captured; captured/conflicted means actively failing oversight.` : ''}`;
       title._titleKey = titleKey;
     }
   }
@@ -4079,7 +4080,7 @@ function renderNode(node, force = false) {
     specialLabel.classList.toggle('compromised', type === 'T' || type === 'I');
     specialLabel.textContent = node.id === BOARD_NODE_ID
       ? 'Board'
-      : `${node.roleName || 'Board'} · ${type === 'T' ? 'trait-led' : type === 'I' ? 'captured' : 'neutral'}`;
+      : `${node.roleName || 'Board'} · ${getGovernanceStateLabel(node, { short: true })}`;
   }
 
   const cxoLabel = RENDER_INDEX.cxoLabels.get(node.id);
@@ -4180,8 +4181,6 @@ function updateUiText() {
   const oversight = getOversightNode();
   const board = getBoardNode();
   const effectiveCounterweights = getEffectiveCounterweights();
-  const oversightState = oversight ? (oversight.currentType === 'T' ? 'trait-led' : oversight.currentType === 'I' ? 'captured' : 'neutral') : 'n/a';
-  const boardState = board ? (board.currentType === 'T' ? 'trait-led' : board.currentType === 'I' ? 'captured' : 'neutral') : 'n/a';
 
   const tipping = STATE.tippingByMonth.get(STATE.timeMonths);
   const captureShare = tipping && tipping.T > 0 ? Math.round((tipping.T / (tipping.T + 1)) * 100) : 0;
@@ -4193,9 +4192,7 @@ function updateUiText() {
     : effectiveCounterweights < STATE.controls.counterweights
       ? ' degraded'
       : '';
-  const govSuffix = (oversightState !== 'neutral' || boardState !== 'neutral')
-    ? ` · Oversight ${oversightState} · Board ${boardState}`
-    : '';
+  const govSuffix = getGovernanceSummary(oversight, board, effectiveCounterweights);
   const head = STATE.customMode
     ? `<strong>Custom Placement</strong>`
     : `<strong>${scenario.name}</strong>`;
@@ -4216,19 +4213,15 @@ function updateUiText() {
 
   const note = document.getElementById('timeline-note');
   if (STATE.timeMonths === 0) {
-    note.textContent = 'Month 0: initial conditions before culture has had time to propagate. People / Legal / Compliance now functions as the oversight branch. If it is captured, accountability is heavily degraded rather than magically vanishing — unless the board is compromised too.';
+    note.textContent = 'Month 0: initial conditions before culture has had time to propagate. People / Legal / Compliance can be active, aligned, or trait-led; the board can be independent, deferential, or captured/conflicted. Accountability now degrades by degree rather than vanishing at the first compromised signal.';
   } else if (STATE.timeMonths <= 12) {
-    note.textContent = 'Months 1–12: executive signaling and harmful doctrine begin shaping branch behavior. If People / Legal / Compliance is captured, effective accountability is crushed but not erased. If the board is compromised too, then it effectively bottoms out.';
+    note.textContent = 'Months 1–12: executive signaling and harmful doctrine begin shaping branch behavior. Aligned oversight weakens counterweights; a deferential board lets more of that damage through, while a captured/conflicted board can drive accountability toward collapse.';
   } else if (STATE.timeMonths <= 24) {
     note.textContent = 'Year 1-2: leaders begin selecting reports who fit the local culture. Grounded neutral VPs, directors, and managers under hostile bosses attempt to shield their direct reports; counterweights make that easier, operating pressure makes it harder. Shielding persists until that leader is fired, turns over, or is manually changed - and it raises their own risk.';
   } else if (STATE.timeMonths <= 36) {
     note.textContent = 'Year 2–3: hiring, promotion, and attrition begin changing who remains. Toxic branches now build exodus pressure gradually; once it gets high enough, neutral people start leaving in waves instead of tripping a cartoon cliff.';
   } else {
     note.textContent = 'Years 3-5: attrition compounds, exodus pressure can hollow out toxic branches, grounded leaders can shield teams, reduce capture below them, and remove trait-led direct reports when the system gives them cover.';
-  }
-
-  if (STATE.tippingCrossedMonth != null && STATE.timeMonths >= STATE.tippingCrossedMonth) {
-    note.textContent += ` Capture overtook accountability at month ${STATE.tippingCrossedMonth} — the org has tipped: grounded hires get filtered out, trait-led and captured occupants stick, and grounded staff leak.`;
   }
 
   if (STATE.tippingCrossedMonth != null && STATE.timeMonths >= STATE.tippingCrossedMonth) {
@@ -4523,10 +4516,14 @@ function focusSubtree(rootId) {
     setBranchSummary(
       `${root.roleName}
 ` +
-      `State: ${TYPE_NAMES[root.currentType]}
+      `State: ${getGovernanceStateLabel(root)}
 ` +
-      `People / Legal / Compliance: ${getOversightNode() ? TYPE_NAMES[getOversightNode().currentType] : 'n/a'}\n\n` +
-      `${isBoardCompromised() ? 'Compromised board oversight stops policing the policing.' : 'A neutral board can pressure the oversight branch back toward clean behavior.'}`
+      `People / Legal / Compliance: ${getOversightNode() ? getGovernanceStateLabel(getOversightNode()) : 'n/a'}\n\n` +
+      `${root.currentType === 'T'
+        ? 'A captured/conflicted board actively fails to police oversight.'
+        : root.currentType === 'I'
+          ? 'A deferential board is passive or information-captured, so oversight damage leaks through.'
+          : 'An independent board can pressure the oversight branch back toward clean behavior.'}`
     );
     return;
   }
@@ -4736,15 +4733,15 @@ function bindInputTooltips() {
     ],
     counterweights: [
       'Accountability / Counterweights',
-      '<strong>The system’s immune response.</strong> This combines oversight, transparency, worker voice, anti-retaliation protection, ethics enforcement, board pressure, and real consequences. High counterweights do not erase Dark Triad traits, but they make them harder to scale, hide, and reward. If the People / Legal / Compliance branch is captured or trait-led, this slider’s effective value is heavily reduced. If both the oversight branch and Board / External Regulator are compromised, it collapses to effectively zero.'
+      '<strong>The system’s immune response.</strong> This combines oversight, transparency, worker voice, anti-retaliation protection, ethics enforcement, board pressure, and real consequences. High counterweights do not erase Dark Triad traits, but they make them harder to scale, hide, and reward. Active oversight preserves more of this value; aligned oversight degrades it. An independent board buffers the damage, a deferential board lets more leak through, and a captured/conflicted board can drive accountability close to collapse.'
     ],
     darkTriadState: [
       'Dark Triad',
       '<strong>Red fill marks a trait-led node.</strong> In the model, this means the current occupant is a Dark Triad carrier: relatively higher in narcissistic, Machiavellian, or psychopathic tendencies, and more likely to exploit power, normalize harm, and shape the system around them.'
     ],
     capturedBehavior: [
-      'Captured Behavior',
-      '<strong>Purple fill marks behavioral capture.</strong> These people are not necessarily Dark Triad personalities themselves. They have adapted to the local system — through fear, incentives, mimicry, self-protection, or status alignment — and are now reinforcing the toxic culture.'
+      'Captured / Deferential',
+      '<strong>Purple fill marks behavioral capture or institutional deference.</strong> For people inside the org, it means they have adapted to the local system through fear, incentives, mimicry, self-protection, or status alignment. For the board, it means passive, deferential, or information-captured oversight rather than active policing.'
     ],
     neutral: [
       'Neutral',
