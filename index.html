@@ -1023,17 +1023,6 @@
     fill: var(--trait);
   }
 
-  .title-pill {
-    fill: var(--bg-3);
-    stroke: var(--rule);
-    stroke-width: 0.6;
-    pointer-events: none;
-  }
-
-  .title-pill.compromised {
-    stroke: var(--trait);
-  }
-
   .arr, .edge {
     stroke: var(--ink-3);
     stroke-width: 0.7;
@@ -1048,6 +1037,11 @@
 
   .edge-spine {
     opacity: 0.55;
+  }
+
+  .edge-spine-branch {
+    opacity: 0;
+    pointer-events: none;
   }
 
   .chart-control {
@@ -1210,11 +1204,16 @@
 
   svg.focus-mode .node,
   svg.focus-mode .edge,
+  svg.focus-mode .manager-ic-link,
   svg.focus-mode .cluster-shell,
   svg.focus-mode .cluster-label,
   svg.focus-mode .lane,
   svg.focus-mode .exodus-badge {
     opacity: 0.13;
+  }
+
+  svg.focus-mode .edge-spine-branch {
+    opacity: 0;
   }
 
   svg.focus-mode .focus-node {
@@ -1363,7 +1362,7 @@
         <div class="panel-title">Legend</div>
         <div class="legend">
           <div class="legend-item has-help" data-help="darkTriadState"><span class="dot dot-T"></span><span><strong>Dark Triad</strong></span></div>
-          <div class="legend-item has-help" data-help="capturedBehavior"><span class="dot dot-I"></span><span><strong>Captured behavior</strong></span></div>
+          <div class="legend-item has-help" data-help="capturedBehavior"><span class="dot dot-I"></span><span><strong>Captured / deferential</strong></span></div>
           <div class="legend-item has-help" data-help="neutral"><span class="dot dot-N"></span><span><strong>Neutral</strong></span></div>
           <div class="legend-item has-help" data-help="grounded"><span class="dot dot-R"></span><span><strong>Grounded individual</strong></span></div>
           <div class="legend-item"><span class="dot dot-S"></span><span><strong>Teal lines</strong> = grounded leader shielding direct reports</span></div>
@@ -1428,7 +1427,7 @@
           <div class="chart-dock-title">Legend</div>
           <div class="legend chart-legend">
             <div class="legend-item has-help" data-help="darkTriadState"><span class="dot dot-T"></span><span><strong>Dark Triad</strong></span></div>
-            <div class="legend-item has-help" data-help="capturedBehavior"><span class="dot dot-I"></span><span><strong>Captured</strong></span></div>
+            <div class="legend-item has-help" data-help="capturedBehavior"><span class="dot dot-I"></span><span><strong>Captured / deferential</strong></span></div>
             <div class="legend-item has-help" data-help="neutral"><span class="dot dot-N"></span><span><strong>Neutral</strong></span></div>
             <div class="legend-item has-help" data-help="grounded"><span class="dot dot-R"></span><span><strong>Grounded</strong></span></div>
             <div class="legend-item"><span class="dot dot-S"></span><span>Shielding</span></div>
@@ -1457,7 +1456,7 @@
       <div class="tree-frame">
         <svg class="cascade" viewBox="0 48 1800 754" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="cascade-title cascade-desc">
           <title id="cascade-title">Dark Triad organizational cascade tree</title>
-          <desc id="cascade-desc">An organization with CEO, VP, Director, Manager, and IC layers; a People / Legal / Compliance oversight branch; and a Board node that can police oversight. Dark Triad trait carriers, influenced behavior, shielding, exodus, and grounded resistance are shown as different node colors.</desc>
+          <desc id="cascade-desc">An organization with CEO, VP, Director, Manager, and IC layers; a People / Legal / Compliance oversight branch; and a Board node that can police oversight. Dark Triad trait carriers, influenced behavior, shielding, exodus, and grounded resistance are shown as different node colors. In Custom Placement mode, people nodes can be cycled through red, purple, neutral, and grounded states.</desc>
 
           <defs>
             <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
@@ -1496,7 +1495,7 @@
         </svg>
         <svg class="mobile-cascade" viewBox="0 0 390 675" preserveAspectRatio="xMidYMin meet" role="img" aria-labelledby="mobile-cascade-title mobile-cascade-desc">
           <title id="mobile-cascade-title">Mobile circle hierarchy map</title>
-          <desc id="mobile-cascade-desc">A mobile version of the organizational cascade where every role is represented by a circle. Color, flashes, grounded outlines, and teal shielding lines use the same model state as the desktop map.</desc>
+          <desc id="mobile-cascade-desc">A mobile version of the organizational cascade where every role is represented by a circle. Color, flashes, grounded outlines, manually assigned grounded status, and teal shielding lines use the same model state as the desktop map.</desc>
           <g id="mobile-guides"></g>
           <g id="mobile-edges"></g>
           <g id="mobile-nodes"></g>
@@ -1564,6 +1563,39 @@ const TYPE_NAMES = {
   N: 'Neutral / grounded'
 };
 
+function getGovernanceStateLabel(node, { short = false } = {}) {
+  if (!node) return 'n/a';
+  if (node.id === BOARD_NODE_ID) {
+    if (node.currentType === 'T') return short ? 'captured' : 'captured / conflicted';
+    if (node.currentType === 'I') return short ? 'deferential' : 'deferential / passive';
+    return short ? 'independent' : 'independent';
+  }
+  if (node.id === OVERSIGHT_NODE_ID) {
+    if (node.currentType === 'T') return short ? 'trait-led' : 'trait-led oversight';
+    if (node.currentType === 'I') return short ? 'captured' : 'captured / aligned';
+    return short ? 'active' : 'active / independent';
+  }
+  return TYPE_NAMES[node.currentType] || 'n/a';
+}
+
+function getNodeStateLabel(node) {
+  if (!node) return 'n/a';
+  if (node.id === BOARD_NODE_ID || node.id === OVERSIGHT_NODE_ID) return getGovernanceStateLabel(node);
+  return TYPE_NAMES[node.currentType] || 'n/a';
+}
+
+function getGovernanceSummary(oversight, board, effectiveCounterweights) {
+  const oversightState = getGovernanceStateLabel(oversight, { short: true });
+  const boardState = getGovernanceStateLabel(board, { short: true });
+  const base = STATE.controls.counterweights || 0;
+  const degradation = base > 0 ? Math.round((1 - effectiveCounterweights / base) * 100) : 0;
+
+  if (!oversight || !board) return '';
+  if (oversight.currentType === 'N' && board.currentType === 'N') return '';
+
+  return ` · Governance: oversight ${oversightState}, board ${boardState}, CW -${Math.max(0, degradation)}%`;
+}
+
 const TYPE_ORDER = ['T', 'I', 'N'];
 const BASE_DEPARTMENT_NAMES = ['Sales', 'Product', 'Engineering', 'Operations', 'Finance', 'Marketing', 'Customer', 'Data', 'Security', 'Support', 'Research', 'People / Legal / Compliance'];
 const CSUITE_CCO_ID = 'csuite-cco';
@@ -1579,7 +1611,7 @@ const CSUITE_ROSTERS = {
     { id: 'csuite-cpo', label: 'CPO', roleName: 'CPO', departments: ['Product'] },
     { id: 'csuite-cto', label: 'CTO', roleName: 'CTO', departments: ['Engineering', 'Data', 'Security', 'Research'] },
     { id: 'csuite-coo', label: 'COO/CFO', roleName: 'COO / CFO', departments: ['Operations', 'Finance', 'Support'] },
-    { id: CSUITE_CCO_ID, label: 'People/Legal', roleName: 'People / Legal', departments: ['People / Legal / Compliance'], oversight: true }
+    { id: CSUITE_CCO_ID, label: 'People Ops', roleName: 'People Ops / Counsel', departments: ['People / Legal / Compliance'], oversight: true }
   ],
   large: [
     { id: 'csuite-cro', label: 'CRO', roleName: 'CRO', departments: ['Sales', 'Marketing', 'Customer'] },
@@ -1644,14 +1676,18 @@ function getCxoLabel(node) {
   return cxo ? cxo.label : 'CXO';
 }
 
+function getCxoLabelWidth(label) {
+  return Math.max(24, Math.min(62, label.length * 4.7 + 10));
+}
+
 const SCENARIOS = {
   founderRot: {
     id: 'founderRot',
     name: 'Founder Rot',
     short: 'Elevated leadership DT rate; the system rewards imitation.',
-    controls: { darkTriad: 14, operatingPressure: 89, counterweights: 12 },
+    controls: { darkTriad: 9, operatingPressure: 89, counterweights: 12 },
     forcedTypes: { '1': 'T' },
-    executiveBias: 1.15
+    executiveBias: 1.05
   },
   cleanDirty: {
     id: 'cleanDirty',
@@ -1665,30 +1701,30 @@ const SCENARIOS = {
     id: 'toxicVpIsland',
     name: 'Toxic VP Island',
     short: 'One VP is red; their branch selects downward.',
-    controls: { darkTriad: 8, operatingPressure: 53, counterweights: 44 },
+    controls: { darkTriad: 6, operatingPressure: 53, counterweights: 44 },
     forcedTypes: { '1': 'N', '2-2': 'T' },
-    executiveBias: 0.95
+    executiveBias: 0.90
   },
   hangover: {
     id: 'hangover',
     name: 'Post-Founder Hangover',
     short: 'The founder is gone, but old harmful doctrine and extraction incentives remain.',
-    controls: { darkTriad: 10, operatingPressure: 82, counterweights: 24 },
+    controls: { darkTriad: 7, operatingPressure: 82, counterweights: 24 },
     forcedTypes: { '1': 'N', '2-1': 'I', '2-3': 'I' },
-    executiveBias: 1.05
+    executiveBias: 1.00
   },
   compromisedOversight: {
     id: 'compromisedOversight',
     name: 'Compromised Oversight',
     short: 'Formal safeguards look strong, but oversight is compromised, so accountability collapses.',
-    controls: { darkTriad: 6, operatingPressure: 74, counterweights: 82 },
+    controls: { darkTriad: 5, operatingPressure: 74, counterweights: 82 },
     forcedTypes: { '1': 'N', '2-4': 'I', 'board': 'N' },
-    executiveBias: 0.92
+    executiveBias: 0.90
   },
   customPlacement: {
     id: 'customPlacement',
     name: 'Custom Placement',
-    short: 'Click nodes to place red/purple/neutral, then run the timeline.',
+    short: 'Click people nodes to place red, purple, neutral, or grounded people, then run the timeline.',
     controls: { darkTriad: 4, operatingPressure: 50, counterweights: 50 },
     forcedTypes: {},
     executiveBias: 1.0,
@@ -1713,6 +1749,7 @@ const STATE = {
   timeMonths: 0,
   forcedTypes: getScenarioForcedTypes('founderRot'),
   manualOverrides: {},
+  groundedOverrides: {},
   customMode: false,
   playbackTimer: null,
   renderToken: 0,
@@ -1722,6 +1759,7 @@ const STATE = {
   initialSeed: 1,
   effectiveCounterweights: SCENARIOS.founderRot.controls.counterweights,
   exodusTriggeredMonths: {},
+  exodusFlashNodes: {},
   oversightCollapseMonth: null,
   tippingByMonth: new Map(),
   tippingCrossedMonth: null,
@@ -1736,6 +1774,59 @@ const LEVELS = { 1: [], 1.5: [], 2: [], 3: [], 4: [], 5: [] };
 const SIM_LEVELS = [1, 1.5, 2, 3, 4, 5];
 const SIM_MONTHS = Array.from({ length: 61 }, (_, i) => i);
 const STATE_CACHE = new Map();
+const RENDER_INDEX = {
+  nodes: new Map(),
+  pins: new Map(),
+  specialLabels: new Map(),
+  cxoLabels: new Map(),
+  edgesByParent: new Map(),
+  clusters: new Map(),
+  clusterLabels: new Map(),
+  clusterBars: new Map(),
+  lanes: new Map(),
+  exodusBadges: new Map(),
+  exodusBadgeTexts: new Map(),
+  mobileExodusLabels: new Map()
+};
+
+function invalidateRenderState() {
+  for (const node of NODES) {
+    node._renderKey = null;
+    node._titleKey = null;
+  }
+}
+
+function indexRenderElements() {
+  Object.values(RENDER_INDEX).forEach(collection => collection.clear());
+
+  document.querySelectorAll('[data-id]').forEach(el => {
+    const id = el.getAttribute('data-id');
+    if (!RENDER_INDEX.nodes.has(id)) RENDER_INDEX.nodes.set(id, []);
+    RENDER_INDEX.nodes.get(id).push(el);
+  });
+
+  document.querySelectorAll('[data-pin-for]').forEach(el => RENDER_INDEX.pins.set(el.getAttribute('data-pin-for'), el));
+  document.querySelectorAll('[data-special-label-for]').forEach(el => RENDER_INDEX.specialLabels.set(el.getAttribute('data-special-label-for'), el));
+  document.querySelectorAll('[data-cxo-label-for]').forEach(el => RENDER_INDEX.cxoLabels.set(el.getAttribute('data-cxo-label-for'), el));
+  document.querySelectorAll('[data-cluster-for]').forEach(el => RENDER_INDEX.clusters.set(el.getAttribute('data-cluster-for'), el));
+  document.querySelectorAll('[data-cluster-label-for]').forEach(el => RENDER_INDEX.clusterLabels.set(el.getAttribute('data-cluster-label-for'), el));
+  document.querySelectorAll('[data-lane]').forEach(el => RENDER_INDEX.lanes.set(el.getAttribute('data-lane'), el));
+  document.querySelectorAll('[data-exodus-badge]').forEach(el => RENDER_INDEX.exodusBadges.set(el.getAttribute('data-exodus-badge'), el));
+  document.querySelectorAll('[data-exodus-badge-text]').forEach(el => RENDER_INDEX.exodusBadgeTexts.set(el.getAttribute('data-exodus-badge-text'), el));
+  document.querySelectorAll('[data-mobile-exodus]').forEach(el => RENDER_INDEX.mobileExodusLabels.set(el.getAttribute('data-mobile-exodus'), el));
+
+  document.querySelectorAll('[data-parent]').forEach(el => {
+    const parent = el.getAttribute('data-parent');
+    if (!RENDER_INDEX.edgesByParent.has(parent)) RENDER_INDEX.edgesByParent.set(parent, []);
+    RENDER_INDEX.edgesByParent.get(parent).push(el);
+  });
+
+  document.querySelectorAll('[data-cluster-bar-for][data-cluster-bar-type]').forEach(el => {
+    RENDER_INDEX.clusterBars.set(`${el.getAttribute('data-cluster-bar-for')}:${el.getAttribute('data-cluster-bar-type')}`, el);
+  });
+
+  invalidateRenderState();
+}
 
 function getDepartmentNames(count, config = ORG_CONFIG) {
   const selected = [];
@@ -1800,7 +1891,7 @@ function getDenseBubbleLayout(config = ORG_CONFIG) {
   const managerSlotWidth = directorSlotWidth / config.managersPerDirector;
   const managerRadius = clamp(managerSlotWidth * 0.16, 2.8, 4.2);
   const icRadius = clamp(managerSlotWidth * 0.075, 1.15, 2.05);
-  const icColumnTopGap = managerRadius + 34;
+  const icColumnTopGap = managerRadius + (config.id === 'large' ? 36 : config.id === 'medium' ? 35 : 34);
   const icColumnBottom = 792;
   const managerStaggerStep = Math.min(32, Math.max(12, managerSlotWidth * 0.52));
   const maxIcGap = Math.max(4.5, icRadius * 3.2);
@@ -1890,6 +1981,13 @@ function getClearedLineEndpoints(fromNode, toNode, { targetExtraClearance = 0 } 
   };
 }
 
+function getEdgeTargetExtraClearance(parent, child) {
+  if (isDenseDesktopMode() && parent && child && parent.level === 3 && child.level === 4) {
+    return ORG_CONFIG.id === 'large' ? 11 : 12;
+  }
+  return 5;
+}
+
 function getLaneDockPoint(lane) {
   const { chartLeft, chartWidth } = getDesktopLayout();
   const laneWidth = chartWidth / ORG_CONFIG.vps;
@@ -1924,31 +2022,41 @@ function getDenseManagerPosition(index, config = ORG_CONFIG) {
     directorLocal * layout.directorSlotWidth +
     (managerLocal + 0.5) * layout.managerSlotWidth;
 
-  const rawY = TIER_Y[4] + (managerLocal - midpoint) * layout.managerStaggerStep;
+  const managerBaseY = getDenseManagerBaseY(config);
+  const rawY = managerBaseY + (managerLocal - midpoint) * layout.managerStaggerStep;
   const icColumnHeight =
     config.icsPerManager * layout.icRadius * 2 +
     Math.max(0, config.icsPerManager - 1) * getDenseIcGap(rawY, config, layout);
   const maxY = layout.icColumnBottom - layout.icColumnTopGap - icColumnHeight;
-  const minY = TIER_Y[4] - 36;
+  const minY = managerBaseY - 36;
   const y = clamp(rawY, minY, maxY);
 
   return { x, y };
 }
 
 function getDenseIcGap(managerY, config = ORG_CONFIG, layout = getDenseBubbleLayout(config)) {
-  const icColumnHeight = Math.max(0, layout.icColumnBottom - (managerY + layout.icColumnTopGap));
-  return Math.max(
-    0.75,
-    Math.min(
-      layout.maxIcGap,
-      (icColumnHeight - config.icsPerManager * layout.icRadius * 2) / Math.max(1, config.icsPerManager - 1)
-    )
-  );
+  return getDenseIcColumnMetrics(managerY, config, layout).icGap;
+}
+
+function getDenseIcTargetLastCenter(config = ORG_CONFIG, layout = getDenseBubbleLayout(config)) {
+  const midpoint = (config.managersPerDirector - 1) / 2;
+  const lowestManagerY = getDenseManagerBaseY(config) + midpoint * layout.managerStaggerStep;
+  const icStep = layout.icRadius * 2 + layout.maxIcGap;
+  return lowestManagerY + layout.icColumnTopGap + Math.max(0, config.icsPerManager - 1) * icStep;
+}
+
+function getDenseIcColumnMetrics(managerY, config = ORG_CONFIG, layout = getDenseBubbleLayout(config)) {
+  const icGap = layout.maxIcGap;
+  const icStep = layout.icRadius * 2 + icGap;
+  const stackSpan = Math.max(0, config.icsPerManager - 1) * icStep;
+  const targetLastCenter = getDenseIcTargetLastCenter(config, layout);
+  const icColumnTopGap = Math.max(layout.icColumnTopGap, targetLastCenter - managerY - stackSpan);
+  return { icGap, icColumnTopGap };
 }
 
 function getDenseContentBottom(config = ORG_CONFIG) {
   const managers = config.vps * config.directorsPerVp * config.managersPerDirector;
-  let bottom = TIER_Y[4];
+  let bottom = getManagerBaseY(config);
 
   if (config.renderMode !== 'denseDots') {
     const layout = getNonDenseIcLayout(config);
@@ -1962,18 +2070,20 @@ function getDenseContentBottom(config = ORG_CONFIG) {
   }
 
   const layout = getDenseBubbleLayout(config);
-  bottom = TIER_Y[4] + layout.managerRadius;
+  bottom = getDenseManagerBaseY(config) + layout.managerRadius;
   for (let i = 0; i < managers; i++) {
     const manager = getDenseManagerPosition(i, config);
-    const icGap = getDenseIcGap(manager.y, config, layout);
+    const icMetrics = getDenseIcColumnMetrics(manager.y, config, layout);
     const lastIcCenter =
       manager.y +
-      layout.icColumnTopGap +
-      Math.max(0, config.icsPerManager - 1) * (layout.icRadius * 2 + icGap);
+      icMetrics.icColumnTopGap +
+      Math.max(0, config.icsPerManager - 1) * (layout.icRadius * 2 + icMetrics.icGap);
     bottom = Math.max(bottom, lastIcCenter + layout.icRadius);
   }
 
-  return Math.ceil(Math.max(690, Math.min(SVG_MIN_Y + SVG_DEFAULT_HEIGHT, bottom + 18)));
+  const minHeight = config.id === 'large' ? 648 : config.id === 'medium' ? 640 : 668;
+  const bottomPad = config.id === 'large' ? 8 : config.id === 'medium' ? 8 : 10;
+  return Math.ceil(Math.max(minHeight, Math.min(SVG_MIN_Y + SVG_DEFAULT_HEIGHT, bottom + bottomPad)));
 }
 
 function getDesktopViewBoxHeight() {
@@ -1992,8 +2102,13 @@ function applyDesktopViewport() {
 
 const NON_DENSE_MANAGER_Y = 480;
 
-function getManagerBaseY() {
-  return isDenseDesktopMode() ? TIER_Y[4] : NON_DENSE_MANAGER_Y;
+function getDenseManagerBaseY(config = ORG_CONFIG) {
+  if (config.renderMode !== 'denseDots') return NON_DENSE_MANAGER_Y;
+  return config.id === 'large' ? 510 : 522;
+}
+
+function getManagerBaseY(config = ORG_CONFIG) {
+  return config.renderMode === 'denseDots' ? getDenseManagerBaseY(config) : NON_DENSE_MANAGER_Y;
 }
 
 function getNonDenseIcLayout(config = ORG_CONFIG) {
@@ -2013,10 +2128,10 @@ function getIcOffset(localIndex, count, managerY = TIER_Y[4]) {
   if (count <= 1) return { x: 0, y: 0 };
   if (isDenseDesktopMode()) {
     const layout = getDenseBubbleLayout();
-    const icGap = getDenseIcGap(managerY, ORG_CONFIG, layout);
+    const icMetrics = getDenseIcColumnMetrics(managerY, ORG_CONFIG, layout);
     return {
       x: 0,
-      y: layout.icColumnTopGap + localIndex * (layout.icRadius * 2 + icGap)
+      y: icMetrics.icColumnTopGap + localIndex * (layout.icRadius * 2 + icMetrics.icGap)
     };
   }
   const layout = getNonDenseIcLayout();
@@ -2029,8 +2144,35 @@ function getIcOffset(localIndex, count, managerY = TIER_Y[4]) {
 function getLaneLabel(lane) {
   const name = DEPARTMENT_NAMES[lane] || `Division ${lane + 1}`;
   if (ORG_CONFIG.vps <= 6) return name;
-  if (name.includes('People')) return 'People / Legal';
+  if (name.includes('People')) return ORG_CONFIG.id === 'large' ? 'People / Legal' : 'People Ops';
   return name.split(' ')[0];
+}
+
+function resolveCxoLabelSpacing(placements, chartLeft, chartWidth) {
+  const rightEdge = chartLeft + chartWidth;
+  const minGap = ORG_CONFIG.id === 'medium' ? 9 : 7;
+  const sorted = [...placements].sort((a, b) => a.x - b.x);
+
+  sorted.forEach(placement => {
+    placement.x = clamp(placement.x, chartLeft + placement.halfWidth, rightEdge - placement.halfWidth);
+  });
+
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = sorted[i - 1];
+    const current = sorted[i];
+    current.x = Math.max(current.x, prev.x + prev.halfWidth + current.halfWidth + minGap);
+  }
+
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const current = sorted[i];
+    if (i === sorted.length - 1) {
+      current.x = Math.min(current.x, rightEdge - current.halfWidth);
+    } else {
+      const next = sorted[i + 1];
+      current.x = Math.min(current.x, next.x - next.halfWidth - current.halfWidth - minGap);
+    }
+    current.x = Math.max(current.x, chartLeft + current.halfWidth);
+  }
 }
 
 function isDenseDesktopMode() {
@@ -2174,20 +2316,18 @@ function getGovernanceStates() {
 
 function getEffectiveCounterweights() {
   const { oversightType, boardType } = getGovernanceStates();
-  const oversightCompromised = oversightType === 'T' || oversightType === 'I';
-  const boardCompromised = boardType === 'T' || boardType === 'I';
 
   let multiplier = 1;
-  if (oversightCompromised && boardCompromised) {
+  if (oversightType === 'T' && boardType === 'T') {
     multiplier = 0;
   } else if (oversightType === 'I') {
-    multiplier = boardType === 'N' ? 0.32 : 0;
+    multiplier = boardType === 'N' ? 0.32 : boardType === 'I' ? 0.12 : 0.04;
   } else if (oversightType === 'T') {
-    multiplier = boardType === 'N' ? 0.18 : 0;
+    multiplier = boardType === 'N' ? 0.18 : boardType === 'I' ? 0.06 : 0;
   } else if (boardType === 'I') {
-    multiplier = 0.92;
+    multiplier = 0.90;
   } else if (boardType === 'T') {
-    multiplier = 0.84;
+    multiplier = 0.78;
   }
 
   const value = Math.round(STATE.controls.counterweights * multiplier);
@@ -2286,15 +2426,15 @@ function isShieldingLeaderAtRisk(leader) {
 
 function renderShieldingLeader(leader) {
   if (!leader || leader.level < 1.5 || leader.level > 4) return;
-  const cluster = document.querySelector(`[data-cluster-for="${leader.id}"]`);
-  const label = document.querySelector(`[data-cluster-label-for="${leader.id}"]`);
+  const cluster = RENDER_INDEX.clusters.get(leader.id);
+  const label = RENDER_INDEX.clusterLabels.get(leader.id);
   const shielded = getShieldingLeader(leader);
   if (cluster) cluster.classList.toggle('shielded-cluster', shielded);
   if (label) {
     label.classList.toggle('shielded-label', shielded);
   }
 
-  document.querySelectorAll(`[data-parent="${leader.id}"]`).forEach(edge => {
+  (RENDER_INDEX.edgesByParent.get(leader.id) || []).forEach(edge => {
     edge.classList.toggle('shielded-edge', shielded);
   });
 }
@@ -2334,7 +2474,7 @@ function computeBoardType(months) {
   }
 
   if (prior === 'I') {
-    const recoveryChance = Math.max(0, (STATE.controls.counterweights - 78) / 120);
+    const recoveryChance = Math.max(0, (STATE.controls.counterweights - 82) / 180);
     if (runRandom(node.occupantSeed, 601 + months) >= recoveryChance) {
       node.currentType = 'I';
       return;
@@ -2344,9 +2484,9 @@ function computeBoardType(months) {
   if (months === 0) {
     const redChance = STATE.controls.darkTriad <= 0 ? 0 : Math.max(0, Math.min(0.14,
       STATE.controls.darkTriad / 100 * 0.55 +
-      operatingPressure * 0.06 +
-      (ceoType === 'T' ? 0.05 : 0) -
-      rawCounterweights * 0.10
+      operatingPressure * 0.025 +
+      (ceoType === 'T' ? 0.075 : 0) -
+      rawCounterweights * 0.14
     ));
 
     if (initialRandom(node.occupantSeed, 610) < redChance) {
@@ -2356,16 +2496,16 @@ function computeBoardType(months) {
 
     const capturedChance = Math.max(0, Math.min(0.50,
       0.03 +
-      operatingPressure * 0.20 +
-      (ceoType === 'T' ? 0.08 : ceoType === 'I' ? 0.04 : 0) -
-      rawCounterweights * 0.12
+      operatingPressure * 0.10 +
+      (ceoType === 'T' ? 0.13 : ceoType === 'I' ? 0.05 : 0) -
+      rawCounterweights * 0.18
     ));
 
     node.currentType = initialRandom(node.occupantSeed, 611) < capturedChance ? 'I' : 'N';
     return;
   }
 
-  const capturePressure = 0.02 + operatingPressure * 0.18 + (ceoType === 'T' ? 0.08 : ceoType === 'I' ? 0.04 : 0) - rawCounterweights * 0.12;
+  const capturePressure = 0.02 + operatingPressure * 0.08 + (ceoType === 'T' ? 0.12 : ceoType === 'I' ? 0.05 : 0) - rawCounterweights * 0.18;
   if (capturePressure > 0.18 && runRandom(node.occupantSeed, 612 + months) < Math.min(0.42, capturePressure)) {
     node.currentType = 'I';
     return;
@@ -2570,7 +2710,7 @@ function buildTree() {
   // Childless CXOs (always includes CCO when no People/L/C VP exists) get spread across
   // any remaining slots so the spine stays orderly.
   const totalSlots = presentCxos.length;
-  presentCxos.forEach((entry, slotIndex) => {
+  const cxoPlacements = presentCxos.map((entry, slotIndex) => {
     const { cxo, vpChildren } = entry;
     let x;
     if (vpChildren.length) {
@@ -2579,6 +2719,14 @@ function buildTree() {
       // Even spacing for childless CXOs (CCO when no People/L/C VP).
       x = csChartLeft + ((slotIndex + 0.5) / totalSlots) * csChartWidth;
     }
+    return {
+      cxo,
+      x,
+      halfWidth: getCxoLabelWidth(cxo.label || 'CXO') / 2
+    };
+  });
+  resolveCxoLabelSpacing(cxoPlacements, csChartLeft, csChartWidth);
+  cxoPlacements.forEach(({ cxo, x }) => {
     registerNode({
       id: cxo.id,
       x,
@@ -2690,8 +2838,7 @@ function updateTierLabelPositions() {
   placePair('lbl-vp',  'vp-count-label',     TIER_Y[2] + getLeaderSize(2).h / 2);
   placePair('lbl-dir', 'dir-count-label',    TIER_Y[3] + getLeaderSize(3).h / 2);
 
-  // Manager center: dense uses TIER_Y[4] baseline; non-dense uses NON_DENSE_MANAGER_Y.
-  const mgrBaseY = isDenseDesktopMode() ? TIER_Y[4] : NON_DENSE_MANAGER_Y;
+  const mgrBaseY = getManagerBaseY();
   const mgrHeight = isDenseDesktopMode() ? getDenseBubbleLayout().managerRadius * 2 : getLeaderSize(4).h;
   placePair('lbl-mgr', 'mgr-count-label', mgrBaseY + mgrHeight / 2);
 
@@ -2699,9 +2846,9 @@ function updateTierLabelPositions() {
   let icMidY;
   if (isDenseDesktopMode()) {
     const layout = getDenseBubbleLayout();
-    const icGap = getDenseIcGap(mgrBaseY, ORG_CONFIG, layout);
-    const firstCenter = mgrBaseY + layout.icColumnTopGap;
-    const lastCenter = firstCenter + Math.max(0, ORG_CONFIG.icsPerManager - 1) * (layout.icRadius * 2 + icGap);
+    const icMetrics = getDenseIcColumnMetrics(mgrBaseY, ORG_CONFIG, layout);
+    const firstCenter = mgrBaseY + icMetrics.icColumnTopGap;
+    const lastCenter = firstCenter + Math.max(0, ORG_CONFIG.icsPerManager - 1) * (layout.icRadius * 2 + icMetrics.icGap);
     icMidY = (firstCenter + lastCenter) / 2;
   } else {
     const layout = getNonDenseIcLayout();
@@ -2727,6 +2874,7 @@ function setOrgSize(sizeId) {
   buildTree();
   buildStaticSvg();
   buildMobileSvg();
+  indexRenderElements();
   buildOrgSizeControls();
   hardResetVisualState();
   recomputeAndRender(false);
@@ -2822,7 +2970,9 @@ function buildStaticSvg() {
     const boardLink = document.createElementNS(SVG_NS, 'path');
     const endpoint = getClearedLineEndpoints(board, oversightNode);
     boardLink.setAttribute('d', `M ${endpoint.x1} ${endpoint.y1} L ${endpoint.x2} ${endpoint.y2}`);
-    boardLink.setAttribute('class', 'board-link');
+    boardLink.setAttribute('class', 'edge board-link');
+    boardLink.setAttribute('data-parent', board.id);
+    boardLink.setAttribute('data-child', oversightNode.id);
     edgesGroup.appendChild(boardLink);
   }
 
@@ -2853,6 +3003,12 @@ function buildStaticSvg() {
     // Per-CXO drops from spine into the CXO node, plus per-VP jogs from CXO down through the beam.
     for (const cxo of csuiteNodes) {
       const cxoBounds = getNodeVisualBounds(cxo);
+
+      const spineBranch = document.createElementNS(SVG_NS, 'path');
+      spineBranch.setAttribute('d', `M ${ceoNode.x} ${CSUITE_SPINE_Y} L ${cxo.x} ${CSUITE_SPINE_Y}`);
+      spineBranch.setAttribute('class', 'edge edge-jog edge-spine-branch');
+      spineBranch.setAttribute('data-spine-for', cxo.id);
+      edgesGroup.appendChild(spineBranch);
 
       const spineDrop = document.createElementNS(SVG_NS, 'path');
       // Land on the top edge of the CXO title pill (pill at y=cxo.y-14 height 10), not on the figure.
@@ -2891,7 +3047,7 @@ function buildStaticSvg() {
     if (node.level === 1.5 || node.level === 2) continue;
 
     const line = document.createElementNS(SVG_NS, 'line');
-    const endpoint = getClearedLineEndpoints(parent, node, { targetExtraClearance: 5 });
+    const endpoint = getClearedLineEndpoints(parent, node, { targetExtraClearance: getEdgeTargetExtraClearance(parent, node) });
     line.setAttribute('x1', endpoint.x1);
     line.setAttribute('y1', endpoint.y1);
     line.setAttribute('x2', endpoint.x2);
@@ -3185,11 +3341,12 @@ function buildMobileSvg() {
 function updateBranchExodusVisuals() {
   for (let lane = 0; lane < ORG_CONFIG.vps; lane++) {
     const metrics = getBranchMetrics(lane);
-    const laneRect = document.querySelector(`[data-lane="${lane}"]`);
-    const badge = document.querySelector(`[data-exodus-badge="${lane}"]`);
-    const badgeText = document.querySelector(`[data-exodus-badge-text="${lane}"]`);
-    const mobileVp = document.querySelector(`svg.mobile-cascade [data-id="2-${lane}"]`);
-    const mobileLabel = document.querySelector(`[data-mobile-exodus="${lane}"]`);
+    const laneKey = String(lane);
+    const laneRect = RENDER_INDEX.lanes.get(laneKey);
+    const badge = RENDER_INDEX.exodusBadges.get(laneKey);
+    const badgeText = RENDER_INDEX.exodusBadgeTexts.get(laneKey);
+    const mobileVp = (RENDER_INDEX.nodes.get(`2-${lane}`) || []).find(el => el.ownerSVGElement && el.ownerSVGElement.classList.contains('mobile-cascade'));
+    const mobileLabel = RENDER_INDEX.mobileExodusLabels.get(laneKey);
     const triggeredMonth = STATE.exodusTriggeredMonths[lane];
     const monthsSinceTrigger = triggeredMonth == null ? 0 : Math.max(0, STATE.timeMonths - triggeredMonth);
     const fadeMonths = 18;
@@ -3200,8 +3357,7 @@ function updateBranchExodusVisuals() {
       laneRect.classList.toggle('lane-exodus', exodusOpacity > 0);
       if (triggeredMonth === STATE.timeMonths) {
         laneRect.classList.remove('lane-exodus-flash');
-        void laneRect.getBoundingClientRect();
-        laneRect.classList.add('lane-exodus-flash');
+        requestAnimationFrame(() => laneRect.classList.add('lane-exodus-flash'));
       } else {
         laneRect.classList.remove('lane-exodus-flash');
       }
@@ -3212,8 +3368,7 @@ function updateBranchExodusVisuals() {
       badge.classList.toggle('visible', exodusOpacity > 0);
       if (triggeredMonth === STATE.timeMonths) {
         badge.classList.remove('lane-exodus-flash');
-        void badge.getBoundingClientRect();
-        badge.classList.add('lane-exodus-flash');
+        requestAnimationFrame(() => badge.classList.add('lane-exodus-flash'));
       } else {
         badge.classList.remove('lane-exodus-flash');
       }
@@ -3228,8 +3383,7 @@ function updateBranchExodusVisuals() {
       mobileVp.classList.toggle('mobile-exodus-node', exodusOpacity > 0);
       if (triggeredMonth === STATE.timeMonths) {
         mobileVp.classList.remove('lane-exodus-flash');
-        void mobileVp.getBoundingClientRect();
-        mobileVp.classList.add('lane-exodus-flash');
+        requestAnimationFrame(() => mobileVp.classList.add('lane-exodus-flash'));
       } else {
         mobileVp.classList.remove('lane-exodus-flash');
       }
@@ -3278,7 +3432,7 @@ function parentInfluencePressure(type) {
   return 0.055;
 }
 
-function computeTraitType(node, parent) {
+function computeTraitType(node) {
   // Trait carrier assignment is for initial conditions only.
   // Monthly cultural spread is purple/turnover; red only enters later through replacement hiring.
   const scenario = SCENARIOS[STATE.scenarioId];
@@ -3286,39 +3440,9 @@ function computeTraitType(node, parent) {
   // Sandbox rule: allow 0% even if unrealistic.
   if (STATE.controls.darkTriad <= 0) return false;
 
-  const years = STATE.timeMonths / 12;
-  const timeline = STATE.timeMonths / 60;
-  const operatingPressure = STATE.controls.operatingPressure / 100;
-
   // Start from level-specific base rate:
   // ~1% workforce, slider-controlled leadership rate, interpolated for directors/managers.
   let chance = darkTriadRateForLevel(node.level) * roleTraitMultiplier(node.level) * (scenario.executiveBias || 1);
-
-  // Red bosses can select, hire, protect, and promote similar people beneath them.
-  // This is strongest for leadership layers, weaker for ICs.
-  if (parent && parent.currentType === 'T') {
-    if (node.level === 2) chance += 0.025 * timeline;
-    if (node.level === 3) chance += 0.040 * timeline;
-    if (node.level === 4) chance += 0.055 * timeline;
-    if (node.level === 5) chance += 0.006 * timeline;
-  } else if (parent && parent.currentType === 'I') {
-    if (node.level === 3) chance += 0.010 * timeline;
-    if (node.level === 4) chance += 0.020 * timeline;
-    if (node.level === 5) chance += 0.004 * timeline;
-    chance *= 0.88;
-  } else if (parent && parent.currentType === 'N') {
-    chance *= 0.45;
-  }
-
-  // Toxic directors remaining in place can hire/select red managers over time.
-  if (node.level === 4 && parent && parent.level === 3 && parent.currentType === 'T') {
-    chance += (0.025 + operatingPressure * 0.040) * timeline;
-  }
-
-  // Attrition/selection compounding after year 2, bounded.
-  if (years >= 2 && parent && (parent.currentType === 'T' || parent.currentType === 'I') && node.level <= 4) {
-    chance += Math.min(0.035, years * 0.006);
-  }
 
   // Caps keep red rare but concentrated; purple carries most cultural spread.
   const cap = node.level <= 2 ? 0.18 : node.level === 3 ? 0.12 : node.level === 4 ? 0.075 : 0.015;
@@ -3337,6 +3461,10 @@ function replaceOccupant(node, months) {
 }
 
 function isMoralResistor(node) {
+  if (node && Object.prototype.hasOwnProperty.call(STATE.groundedOverrides, node.id)) {
+    return Boolean(STATE.groundedOverrides[node.id]);
+  }
+
   // Occupant-level trait, not a seat-level trait.
   // Modeling assumption: about 15% of broad workers are strong moral/empathetic resistors
   // (roughly a top-tail threshold, not a diagnostic claim). Leadership layers are lower
@@ -3651,7 +3779,8 @@ function getCacheKey() {
     orgSize: STATE.orgSize,
     controls: STATE.controls,
     forcedTypes: STATE.forcedTypes,
-    manualOverrides: STATE.manualOverrides
+    manualOverrides: STATE.manualOverrides,
+    groundedOverrides: STATE.groundedOverrides
   });
 }
 
@@ -3719,7 +3848,7 @@ function computeOneMonthStep(months) {
 
       // Initial red assignment only. Existing people do not magically become Dark Triad
       // every month. Additional red nodes enter through turnover/replacement selection.
-      if (months === 0 && computeTraitType(node, parent)) {
+      if (months === 0 && computeTraitType(node)) {
         node.currentType = 'T';
         continue;
       }
@@ -3795,6 +3924,28 @@ function computeTippingPoint(months) {
   return { T, influence, accountability, regime };
 }
 
+function recordMonthlyDerivedState(months) {
+  for (let lane = 0; lane < ORG_CONFIG.vps; lane++) {
+    if (STATE.exodusTriggeredMonths[lane] == null && getBranchMetrics(lane).exodusTriggered) {
+      STATE.exodusTriggeredMonths[lane] = months;
+      STATE.exodusFlashNodes[months] = [
+        ...(STATE.exodusFlashNodes[months] || []),
+        ...getExodusFlashNodeIds(lane, months)
+      ];
+    }
+  }
+
+  if (STATE.oversightCollapseMonth == null && getEffectiveCounterweights() <= 0) {
+    STATE.oversightCollapseMonth = months;
+  }
+
+  const tipping = computeTippingPoint(months);
+  STATE.tippingByMonth.set(months, tipping);
+  if (STATE.tippingCrossedMonth == null && tipping.T >= 1) {
+    STATE.tippingCrossedMonth = months;
+  }
+}
+
 function computeAllNodeTypes() {
   const target = Number(STATE.timeMonths) || 0;
   resetRuntimeState();
@@ -3804,34 +3955,21 @@ function computeAllNodeTypes() {
     if (months > target) break;
     STATE.timeMonths = months;
     computeOneMonthStep(months);
-
-    for (let lane = 0; lane < ORG_CONFIG.vps; lane++) {
-      if (STATE.exodusTriggeredMonths[lane] == null && getBranchMetrics(lane).exodusTriggered) {
-        STATE.exodusTriggeredMonths[lane] = months;
-        STATE.exodusFlashNodes[months] = [
-          ...(STATE.exodusFlashNodes[months] || []),
-          ...getExodusFlashNodeIds(lane, months)
-        ];
-      }
-    }
-
-    if (STATE.oversightCollapseMonth == null && getEffectiveCounterweights() <= 0) {
-      STATE.oversightCollapseMonth = months;
-    }
-
-    const tipping = computeTippingPoint(months);
-    STATE.tippingByMonth.set(months, tipping);
-    if (STATE.tippingCrossedMonth == null && tipping.T >= 1) {
-      STATE.tippingCrossedMonth = months;
-    }
+    recordMonthlyDerivedState(months);
   }
 
   STATE.timeMonths = target;
 }
 
-function renderNode(node) {
+function advanceOneMonthInPlace(months) {
+  STATE.timeMonths = months;
+  computeOneMonthStep(months);
+  recordMonthlyDerivedState(months);
+}
+
+function renderNode(node, force = false) {
   const type = node.currentType;
-  const elements = Array.from(document.querySelectorAll(`[data-id="${node.id}"]`));
+  const elements = RENDER_INDEX.nodes.get(node.id) || [];
   if (!elements.length) return;
   const firedEventThisMonth = node.firingEvents && node.firingEvents.find(evt => evt.months === STATE.timeMonths);
   const turnoverEventThisMonth = node.turnoverEvents && node.turnoverEvents.find(evt => evt.months === STATE.timeMonths);
@@ -3846,6 +3984,19 @@ function renderNode(node) {
       : isDenseDesktopMode() && node.level === 4 ? 'node manager-dot'
         : 'node leader';
   const resistorClass = !node.special && type === 'N' && isMoralResistor(node) && !suppressGroundedDuringReplacement ? ' grounded-individual' : '';
+  const shielded = node.level >= 1.5 && node.level <= 4 ? getShieldingLeader(node) : false;
+  const renderKey = [
+    type,
+    Boolean(resistorClass),
+    Boolean(STATE.manualOverrides[node.id]),
+    Boolean(STATE.groundedOverrides[node.id]),
+    firedEventThisMonth ? `f${STATE.timeMonths}` : '',
+    turnoverEventThisMonth ? `t${STATE.timeMonths}` : '',
+    shielded
+  ].join('|');
+
+  if (!force && node._renderKey === renderKey) return;
+  node._renderKey = renderKey;
 
   const fills = {
     T: '#C73E2E',
@@ -3892,7 +4043,6 @@ function renderNode(node) {
     // neutral frame boundary, which makes SVG animations reliably restart.
     el.classList.remove('turnover-flash', 'fire-flash');
     if (firedEventThisMonth || turnoverEventThisMonth) {
-      void el.getBoundingClientRect();
       requestAnimationFrame(() => {
         if (firedEventThisMonth) {
           el.classList.add('fire-flash');
@@ -3904,33 +4054,36 @@ function renderNode(node) {
     }
 
     const title = el.querySelector('title');
-    if (title) {
+    const titleKey = `${renderKey}|${node.turnoverEvents ? node.turnoverEvents.length : 0}|${node.firingEvents ? node.firingEvents.length : 0}`;
+    if (title && (force || title._titleKey !== titleKey)) {
       const parent = node.parentId ? NODE_MAP.get(node.parentId) : null;
       title.textContent =
-        `${getRoleName(node)} · ${TYPE_NAMES[type]}` +
+        `${getRoleName(node)} · ${getNodeStateLabel(node)}` +
         `${STATE.manualOverrides[node.id] ? ' (manually set)' : ''}` +
-        `${parent ? `\nParent: ${TYPE_NAMES[parent.currentType]}` : ''}` +
+        `${STATE.groundedOverrides[node.id] ? ' (manually grounded)' : ''}` +
+        `${parent ? `\nParent: ${getNodeStateLabel(parent)}` : ''}` +
         `${node.turnoverEvents && node.turnoverEvents.length ? `\nAttrition events: ${node.turnoverEvents.length}` : ''}` +
         `${node.firingEvents && node.firingEvents.length ? `\nFiring events: ${node.firingEvents.length}` : ''}` +
         `${getShieldingLeader(node) ? `\nLeader is actively shielding direct reports` : ''}` +
         `${!node.special && isMoralResistor(node) ? `\nCurrent occupant: grounded / high-integrity resistance` : ''}` +
         `${node.id === OVERSIGHT_NODE_ID ? `\nEffective counterweights: ${getEffectiveCounterweights()} / 100` : ''}` +
-        `${node.id === BOARD_NODE_ID ? `\nThis node can police or fail to police oversight.` : ''}`;
+        `${node.id === BOARD_NODE_ID ? `\nDeferential means passive or information-captured; captured/conflicted means actively failing oversight.` : ''}`;
+      title._titleKey = titleKey;
     }
   }
 
-  const pin = document.querySelector(`[data-pin-for="${node.id}"]`);
-  if (pin) pin.style.opacity = STATE.manualOverrides[node.id] ? '1' : '0';
+  const pin = RENDER_INDEX.pins.get(node.id);
+  if (pin) pin.style.opacity = (STATE.manualOverrides[node.id] || STATE.groundedOverrides[node.id]) ? '1' : '0';
 
-  const specialLabel = document.querySelector(`[data-special-label-for="${node.id}"]`);
+  const specialLabel = RENDER_INDEX.specialLabels.get(node.id);
   if (specialLabel) {
     specialLabel.classList.toggle('compromised', type === 'T' || type === 'I');
     specialLabel.textContent = node.id === BOARD_NODE_ID
       ? 'Board'
-      : `${node.roleName || 'Board'} · ${type === 'T' ? 'trait-led' : type === 'I' ? 'captured' : 'neutral'}`;
+      : `${node.roleName || 'Board'} · ${getGovernanceStateLabel(node, { short: true })}`;
   }
 
-  const cxoLabel = document.querySelector(`[data-cxo-label-for="${node.id}"]`);
+  const cxoLabel = RENDER_INDEX.cxoLabels.get(node.id);
   if (cxoLabel) {
     cxoLabel.classList.toggle('compromised', type === 'T' || type === 'I');
     if (node.level === CSUITE_LEVEL) cxoLabel.textContent = getCxoLabel(node);
@@ -3940,8 +4093,8 @@ function renderNode(node) {
 }
 
 function renderAggregateCluster(owner) {
-  const shell = document.querySelector(`[data-cluster-for="${owner.id}"]`);
-  const label = document.querySelector(`[data-cluster-label-for="${owner.id}"]`);
+  const shell = RENDER_INDEX.clusters.get(owner.id);
+  const label = RENDER_INDEX.clusterLabels.get(owner.id);
   if (!shell && !label) return;
 
   const members = getAggregateMembers(owner);
@@ -3951,7 +4104,7 @@ function renderAggregateCluster(owner) {
   const maxBarWidth = Math.max(4, shellWidth - 8);
 
   TYPE_ORDER.forEach(type => {
-    const bar = document.querySelector(`[data-cluster-bar-for="${owner.id}"][data-cluster-bar-type="${type}"]`);
+    const bar = RENDER_INDEX.clusterBars.get(`${owner.id}:${type}`);
     if (!bar) return;
     bar.setAttribute('width', Math.max(0, maxBarWidth * (counts[type] / total)));
   });
@@ -3971,13 +4124,8 @@ function renderAggregateClusters() {
   }
 }
 
-function reconcileSvgToModel() {
-  const modelIds = new Set(NODES.map(node => node.id));
-  document.querySelectorAll('[data-id]').forEach(el => {
-    if (!modelIds.has(el.getAttribute('data-id'))) el.remove();
-  });
-
-  for (const node of NODES) renderNode(node);
+function reconcileSvgToModel(force = false) {
+  for (const node of NODES) renderNode(node, force);
   renderAggregateClusters();
 }
 
@@ -4033,8 +4181,6 @@ function updateUiText() {
   const oversight = getOversightNode();
   const board = getBoardNode();
   const effectiveCounterweights = getEffectiveCounterweights();
-  const oversightState = oversight ? (oversight.currentType === 'T' ? 'trait-led' : oversight.currentType === 'I' ? 'captured' : 'neutral') : 'n/a';
-  const boardState = board ? (board.currentType === 'T' ? 'trait-led' : board.currentType === 'I' ? 'captured' : 'neutral') : 'n/a';
 
   const tipping = STATE.tippingByMonth.get(STATE.timeMonths);
   const captureShare = tipping && tipping.T > 0 ? Math.round((tipping.T / (tipping.T + 1)) * 100) : 0;
@@ -4046,9 +4192,7 @@ function updateUiText() {
     : effectiveCounterweights < STATE.controls.counterweights
       ? ' degraded'
       : '';
-  const govSuffix = (oversightState !== 'neutral' || boardState !== 'neutral')
-    ? ` · Oversight ${oversightState} · Board ${boardState}`
-    : '';
+  const govSuffix = getGovernanceSummary(oversight, board, effectiveCounterweights);
   const head = STATE.customMode
     ? `<strong>Custom Placement</strong>`
     : `<strong>${scenario.name}</strong>`;
@@ -4069,9 +4213,9 @@ function updateUiText() {
 
   const note = document.getElementById('timeline-note');
   if (STATE.timeMonths === 0) {
-    note.textContent = 'Month 0: initial conditions before culture has had time to propagate. People / Legal / Compliance now functions as the oversight branch. If it is captured, accountability is heavily degraded rather than magically vanishing — unless the board is compromised too.';
+    note.textContent = 'Month 0: initial conditions before culture has had time to propagate. People / Legal / Compliance can be active, aligned, or trait-led; the board can be independent, deferential, or captured/conflicted. Accountability now degrades by degree rather than vanishing at the first compromised signal.';
   } else if (STATE.timeMonths <= 12) {
-    note.textContent = 'Months 1–12: executive signaling and harmful doctrine begin shaping branch behavior. If People / Legal / Compliance is captured, effective accountability is crushed but not erased. If the board is compromised too, then it effectively bottoms out.';
+    note.textContent = 'Months 1–12: executive signaling and harmful doctrine begin shaping branch behavior. Aligned oversight weakens counterweights; a deferential board lets more of that damage through, while a captured/conflicted board can drive accountability toward collapse.';
   } else if (STATE.timeMonths <= 24) {
     note.textContent = 'Year 1-2: leaders begin selecting reports who fit the local culture. Grounded neutral VPs, directors, and managers under hostile bosses attempt to shield their direct reports; counterweights make that easier, operating pressure makes it harder. Shielding persists until that leader is fired, turns over, or is manually changed - and it raises their own risk.';
   } else if (STATE.timeMonths <= 36) {
@@ -4088,6 +4232,16 @@ function updateUiText() {
   updateTippingReadout();
 }
 
+function updateTimeScrubText() {
+  const timeText = formatTime(STATE.timeMonths);
+  const timeInput = document.getElementById('timeMonths');
+  const timeValue = document.getElementById('timeMonths-val');
+  const timeLabel = document.getElementById('time-label');
+  if (timeInput) timeInput.value = STATE.timeMonths;
+  if (timeValue) timeValue.textContent = timeText;
+  if (timeLabel) timeLabel.textContent = timeText;
+}
+
 function updateTippingReadout() {
   const mark = document.getElementById('tipping-fill');
   const label = document.getElementById('tipping-val');
@@ -4095,6 +4249,7 @@ function updateTippingReadout() {
   if (!mark || !label || !row) return;
 
   const tipping = STATE.tippingByMonth.get(STATE.timeMonths);
+  if (!tipping) return;
   const T = tipping ? tipping.T : 0;
   const regime = tipping ? tipping.regime : 'stable';
 
@@ -4127,6 +4282,7 @@ function resetSimulationToScenario(scenarioId) {
   STATE.timeMonths = 0;
   STATE.forcedTypes = getScenarioForcedTypes(scenarioId);
   STATE.manualOverrides = {};
+  STATE.groundedOverrides = {};
   STATE.customMode = Boolean(scenario.custom);
   STATE.runSeed = 1;
   STATE.initialSeed = 1;
@@ -4212,6 +4368,8 @@ function playSimulation() {
   for (const timer of STATE.renderTimers) clearTimeout(timer);
   STATE.renderTimers = [];
   STATE.renderToken++;
+  computeAllNodeTypes();
+  renderAllNodes(false);
 
   let month = Number(STATE.timeMonths) || 0;
 
@@ -4223,11 +4381,10 @@ function playSimulation() {
       return;
     }
 
-    STATE.timeMonths = month;
-
-    // During playback, render immediately without the tier cascade.
-    // The month-to-month color changes are the animation; pacing carries the drama.
-    recomputeAndRender(false);
+    // During playback, step the already-computed timeline forward by one month.
+    // Scrubbing still uses full recompute; play avoids reprocessing month 0..N every tick.
+    advanceOneMonthInPlace(month);
+    renderAllNodes(false);
 
     if (month >= 60) {
       STATE.playbackTimer = setTimeout(stopPlayback, 700);
@@ -4271,8 +4428,16 @@ function handleTimeInput(value, animated = false) {
     recomputeAndRender(true);
   } else {
     STATE.computeDebounce = setTimeout(() => recomputeAndRender(false), 70);
-    updateUiText();
+    updateTimeScrubText();
   }
+}
+
+function getCustomPlacementState(node) {
+  const manual = STATE.manualOverrides[node.id];
+  if (manual === 'T' || manual === 'I') return manual;
+  if (!manual && (node.currentType === 'T' || node.currentType === 'I')) return node.currentType;
+  if (STATE.groundedOverrides[node.id]) return 'R';
+  return 'N';
 }
 
 function handleNodeClick(node) {
@@ -4281,13 +4446,19 @@ function handleNodeClick(node) {
 
   stopPlayback();
 
-  const cur = STATE.manualOverrides[node.id] || node.currentType;
-  const next = cur === 'T' ? 'I' : cur === 'I' ? 'N' : 'T';
+  const cur = getCustomPlacementState(node);
+  const canAssignGrounded = !node.special;
+  const next = cur === 'T' ? 'I' : cur === 'I' ? 'N' : cur === 'N' && canAssignGrounded ? 'R' : 'T';
 
   if (next === 'T' && STATE.controls.darkTriad <= 0) {
     STATE.manualOverrides[node.id] = 'N';
+    delete STATE.groundedOverrides[node.id];
+  } else if (next === 'R') {
+    STATE.manualOverrides[node.id] = 'N';
+    STATE.groundedOverrides[node.id] = true;
   } else {
     STATE.manualOverrides[node.id] = next;
+    delete STATE.groundedOverrides[node.id];
   }
 
   recomputeAndRender(true);
@@ -4308,6 +4479,18 @@ function getDescendantIds(rootId) {
   return ids;
 }
 
+function getAncestorIds(rootId) {
+  const ids = new Set();
+  let node = NODE_MAP.get(rootId);
+
+  while (node) {
+    ids.add(node.id);
+    node = node.parentId ? NODE_MAP.get(node.parentId) : null;
+  }
+
+  return ids;
+}
+
 function setBranchSummary(text) {
   const el = document.getElementById('branch-summary');
   if (el) el.textContent = text;
@@ -4316,6 +4499,8 @@ function setBranchSummary(text) {
 function focusSubtree(rootId) {
   const svg = document.querySelector('svg.cascade');
   const ids = getDescendantIds(rootId);
+  const ancestorIds = getAncestorIds(rootId);
+  const focusEdgeIds = new Set([...ids, ...ancestorIds]);
   const root = NODE_MAP.get(rootId);
 
   document.querySelectorAll('.focus-node, .focus-edge, .focus-cluster, .focus-label, .focus-lane').forEach(el => {
@@ -4326,13 +4511,19 @@ function focusSubtree(rootId) {
     svg.classList.add('focus-mode');
     const nodeEl = document.querySelector(`[data-id="${rootId}"]`);
     if (nodeEl) nodeEl.classList.add('focus-node');
+    const boardLink = document.querySelector(`[data-parent="${rootId}"]`);
+    if (boardLink) boardLink.classList.add('focus-edge');
     setBranchSummary(
       `${root.roleName}
 ` +
-      `State: ${TYPE_NAMES[root.currentType]}
+      `State: ${getGovernanceStateLabel(root)}
 ` +
-      `People / Legal / Compliance: ${getOversightNode() ? TYPE_NAMES[getOversightNode().currentType] : 'n/a'}\n\n` +
-      `${isBoardCompromised() ? 'Compromised board oversight stops policing the policing.' : 'A neutral board can pressure the oversight branch back toward clean behavior.'}`
+      `People / Legal / Compliance: ${getOversightNode() ? getGovernanceStateLabel(getOversightNode()) : 'n/a'}\n\n` +
+      `${root.currentType === 'T'
+        ? 'A captured/conflicted board actively fails to police oversight.'
+        : root.currentType === 'I'
+          ? 'A deferential board is passive or information-captured, so oversight damage leaks through.'
+          : 'An independent board can pressure the oversight branch back toward clean behavior.'}`
     );
     return;
   }
@@ -4367,8 +4558,13 @@ function focusSubtree(rootId) {
     }
   });
 
-  // Walk up the focus root's ancestor chain. If we pass through a CXO before reaching the CEO,
-  // remember its id so the CEO drop + spine bar + spine→CXO arrow can highlight as one path.
+  ancestorIds.forEach(id => {
+    const nodeEl = document.querySelector(`[data-id="${id}"]`);
+    if (nodeEl) nodeEl.classList.add('focus-node');
+  });
+
+  // Walk up the focus root's ancestor chain. If we pass through a CXO before
+  // reaching the CEO, only that top-level route should light during drill-down.
   const rootIsCeo = rootId === '1';
   let chainCxoId = null;
   {
@@ -4379,19 +4575,30 @@ function focusSubtree(rootId) {
     }
   }
 
-  document.querySelectorAll('.edge').forEach(edge => {
+  document.querySelectorAll('.edge, .manager-ic-link').forEach(edge => {
     const child = edge.getAttribute('data-child');
-    if (ids.has(child)) edge.classList.add('focus-edge');
+    const parent = edge.getAttribute('data-parent');
+    if (focusEdgeIds.has(child)) edge.classList.add('focus-edge');
 
-    // Spine bar + CEO→spine drop carry the whole CEO↔C-suite manifold; light them when hovering
-    // the CEO or any node inside a CXO's subtree.
-    if ((edge.classList.contains('edge-spine') || edge.classList.contains('edge-ceo-spine')) &&
-        (rootIsCeo || chainCxoId)) {
+    // Keep drill-down focused: the shared CEO drop and full horizontal spine
+    // light only for CEO focus. CXO branches use hidden per-CXO spine segments.
+    if (edge.classList.contains('edge-ceo-spine') && rootIsCeo) {
       edge.classList.add('focus-edge');
     }
 
-    // The specific spine→CXO arrow for the CXO that owns the focused subtree.
-    if (chainCxoId && child === chainCxoId) edge.classList.add('focus-edge');
+    if (edge.classList.contains('edge-spine') && rootIsCeo) {
+      edge.classList.add('focus-edge');
+    }
+
+    if (chainCxoId && edge.getAttribute('data-spine-for') === chainCxoId) {
+      edge.classList.add('focus-edge');
+    }
+
+    // Manager-to-IC column connectors represent grouped edges, so they key by
+    // parent manager rather than a concrete child node id.
+    if (edge.classList.contains('manager-ic-link') && focusEdgeIds.has(parent)) {
+      edge.classList.add('focus-edge');
+    }
   });
 
   const resistantPockets = branchNodes.filter(n => !n.special && n.currentType === 'N' && isMoralResistor(n)).length;
@@ -4428,7 +4635,7 @@ function clearFocus() {
     el.classList.remove('focus-node', 'focus-edge', 'focus-cluster', 'focus-label', 'focus-lane');
   });
 
-  setBranchSummary('Hover to isolate a branch. In Custom Placement, click nodes — including Board and People / Legal / Compliance — to cycle red → purple → clean.');
+  setBranchSummary('Hover to isolate a branch. In Custom Placement, click people nodes to cycle red → purple → clean → grounded. Board cycles red → purple → clean.');
 }
 
 function updateInputHeat() {
@@ -4480,6 +4687,11 @@ function hardResetVisualState() {
     el.classList.remove('compromised');
     if (node) el.textContent = node.roleName || 'Board';
   });
+  document.querySelectorAll('[data-pin-for]').forEach(el => {
+    const id = el.getAttribute('data-pin-for');
+    el.style.opacity = (STATE.manualOverrides[id] || STATE.groundedOverrides[id]) ? '1' : '0';
+  });
+  invalidateRenderState();
 }
 
 function newRun() {
@@ -4521,15 +4733,15 @@ function bindInputTooltips() {
     ],
     counterweights: [
       'Accountability / Counterweights',
-      '<strong>The system’s immune response.</strong> This combines oversight, transparency, worker voice, anti-retaliation protection, ethics enforcement, board pressure, and real consequences. High counterweights do not erase Dark Triad traits, but they make them harder to scale, hide, and reward. If the People / Legal / Compliance branch is captured or trait-led, this slider’s effective value is heavily reduced. If both the oversight branch and Board / External Regulator are compromised, it collapses to effectively zero.'
+      '<strong>The system’s immune response.</strong> This combines oversight, transparency, worker voice, anti-retaliation protection, ethics enforcement, board pressure, and real consequences. High counterweights do not erase Dark Triad traits, but they make them harder to scale, hide, and reward. Active oversight preserves more of this value; aligned oversight degrades it. An independent board buffers the damage, a deferential board lets more leak through, and a captured/conflicted board can drive accountability close to collapse.'
     ],
     darkTriadState: [
       'Dark Triad',
       '<strong>Red fill marks a trait-led node.</strong> In the model, this means the current occupant is a Dark Triad carrier: relatively higher in narcissistic, Machiavellian, or psychopathic tendencies, and more likely to exploit power, normalize harm, and shape the system around them.'
     ],
     capturedBehavior: [
-      'Captured Behavior',
-      '<strong>Purple fill marks behavioral capture.</strong> These people are not necessarily Dark Triad personalities themselves. They have adapted to the local system — through fear, incentives, mimicry, self-protection, or status alignment — and are now reinforcing the toxic culture.'
+      'Captured / Deferential',
+      '<strong>Purple fill marks behavioral capture or institutional deference.</strong> For people inside the org, it means they have adapted to the local system through fear, incentives, mimicry, self-protection, or status alignment. For the board, it means passive, deferential, or information-captured oversight rather than active policing.'
     ],
     neutral: [
       'Neutral',
@@ -4537,7 +4749,7 @@ function bindInputTooltips() {
     ],
     grounded: [
       'Grounded Individual',
-      '<strong>A grounded individual is internally anchored under pressure.</strong> In the model, this means they are harder to capture, coerce, flatter, intimidate, or filter into toxic alignment. As VPs, directors, or managers, they lower capture risk below them, can shield direct reports under hostile bosses, and are more likely to remove trait-led direct reports when counterweights give them cover.'
+      '<strong>A grounded individual is internally anchored under pressure.</strong> In the model, this means they are harder to capture, coerce, flatter, intimidate, or filter into toxic alignment. As VPs, directors, or managers, they lower capture risk below them, can shield direct reports under hostile bosses, and are more likely to remove trait-led direct reports when counterweights give them cover. In Custom Placement mode, click a clean node once more to assign grounded status manually.'
     ],
     tipping: [
       'Capture vs. Accountability — Entropy Engine',
@@ -4600,6 +4812,7 @@ function init() {
   buildOrgSizeControls();
   buildStaticSvg();
   buildMobileSvg();
+  indexRenderElements();
   bindControls();
   bindInputTooltips();
   syncControlsToState();
