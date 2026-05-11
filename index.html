@@ -798,15 +798,13 @@
   }
 
   .tree-topbar {
-    display: grid;
-    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr);
+    display: flex;
     align-items: center;
-    gap: 6px;
     background: var(--bg-2);
     border: 1px solid var(--rule);
     border-radius: 7px;
     padding: 3px 7px;
-    min-height: 23px;
+    min-height: 22px;
   }
 
   .status {
@@ -1331,7 +1329,7 @@
     <div class="eyebrow">Organizational pathology · Dark Triad cascade</div>
     <h1>How a <em>few</em> shape the many.</h1>
     <p class="deck">
-      A simulator exposing how malevolent personality traits cascade influence through incentives, selection, turnover, and accountability systems.
+      A simulator exposing how malevolent personality traits cascade influence through incentives, selection, attrition, and accountability systems.
     </p>
   </header>
 
@@ -1369,7 +1367,7 @@
           <div class="legend-item has-help" data-help="neutral"><span class="dot dot-N"></span><span><strong>Neutral</strong></span></div>
           <div class="legend-item has-help" data-help="grounded"><span class="dot dot-R"></span><span><strong>Grounded individual</strong></span></div>
           <div class="legend-item"><span class="dot dot-S"></span><span><strong>Teal lines</strong> = grounded leader shielding direct reports</span></div>
-          <div class="legend-item"><span class="dot dot-O"></span><span><strong>Yellow flash</strong> = turnover</span></div>
+          <div class="legend-item"><span class="dot dot-O"></span><span><strong>Yellow flash</strong> = attrition</span></div>
           <div class="legend-item"><span class="dot dot-F"></span><span><strong>Dark red flash</strong> = firing</span></div>
           <div class="legend-item"><span class="dot dot-X"></span><span><strong>Exodus badge</strong> = branch under exodus pressure</span></div>
           <div class="legend-note">Hover the first four legend items for more context.</div>
@@ -1434,7 +1432,7 @@
             <div class="legend-item has-help" data-help="neutral"><span class="dot dot-N"></span><span><strong>Neutral</strong></span></div>
             <div class="legend-item has-help" data-help="grounded"><span class="dot dot-R"></span><span><strong>Grounded</strong></span></div>
             <div class="legend-item"><span class="dot dot-S"></span><span>Shielding</span></div>
-            <div class="legend-item"><span class="dot dot-O"></span><span>Turnover</span></div>
+            <div class="legend-item"><span class="dot dot-O"></span><span>Attrition</span></div>
             <div class="legend-item"><span class="dot dot-F"></span><span>Firing</span></div>
             <div class="legend-item"><span class="dot dot-X"></span><span>Exodus</span></div>
           </div>
@@ -1453,8 +1451,7 @@
       </div>
 
       <div class="tree-topbar">
-        <div class="status" id="status-line"><strong>Founder Rot</strong> - Year 0 - Small org - 250 people</div>
-        <div class="status" id="counts-line">Dark Triad 0 - Influenced 0 - Neutral 250</div>
+        <div class="status" id="status-line"><strong>Founder Rot</strong> · Small · 0y · 250 ppl · T0 I0 N250 · Capture — · CW 12/100</div>
       </div>
 
       <div class="tree-frame">
@@ -3913,7 +3910,7 @@ function renderNode(node) {
         `${getRoleName(node)} · ${TYPE_NAMES[type]}` +
         `${STATE.manualOverrides[node.id] ? ' (manually set)' : ''}` +
         `${parent ? `\nParent: ${TYPE_NAMES[parent.currentType]}` : ''}` +
-        `${node.turnoverEvents && node.turnoverEvents.length ? `\nTurnover events: ${node.turnoverEvents.length}` : ''}` +
+        `${node.turnoverEvents && node.turnoverEvents.length ? `\nAttrition events: ${node.turnoverEvents.length}` : ''}` +
         `${node.firingEvents && node.firingEvents.length ? `\nFiring events: ${node.firingEvents.length}` : ''}` +
         `${getShieldingLeader(node) ? `\nLeader is actively shielding direct reports` : ''}` +
         `${!node.special && isMoralResistor(node) ? `\nCurrent occupant: grounded / high-integrity resistance` : ''}` +
@@ -4039,11 +4036,32 @@ function updateUiText() {
   const oversightState = oversight ? (oversight.currentType === 'T' ? 'trait-led' : oversight.currentType === 'I' ? 'captured' : 'neutral') : 'n/a';
   const boardState = board ? (board.currentType === 'T' ? 'trait-led' : board.currentType === 'I' ? 'captured' : 'neutral') : 'n/a';
 
-  document.getElementById('status-line').innerHTML =
-    `${STATE.customMode ? '<strong>Custom Placement</strong> - Click nodes to set red/purple/neutral - ' : `<strong>${scenario.name}</strong> - `}Run ${STATE.runSeed} - ${timeText} - ${ORG_CONFIG.name} org - Leadership DT ${STATE.controls.darkTriad}% - People/Legal/Compliance ${oversightState} - Board ${boardState} - Effective counterweights ${effectiveCounterweights}/100 - ${getTotalPeople()} people`;
+  const tipping = STATE.tippingByMonth.get(STATE.timeMonths);
+  const captureShare = tipping && tipping.T > 0 ? Math.round((tipping.T / (tipping.T + 1)) * 100) : 0;
+  const captureText = tipping && tipping.T > 0
+    ? `${captureShare}%${tipping.regime === 'predatory' ? ' <strong style="color:var(--trait)">Predatory</strong>' : ''}`
+    : '—';
+  const cwSuffix = effectiveCounterweights === 0
+    ? ' <strong style="color:var(--trait)">collapsed</strong>'
+    : effectiveCounterweights < STATE.controls.counterweights
+      ? ' degraded'
+      : '';
+  const govSuffix = (oversightState !== 'neutral' || boardState !== 'neutral')
+    ? ` · Oversight ${oversightState} · Board ${boardState}`
+    : '';
+  const head = STATE.customMode
+    ? `<strong>Custom Placement</strong>`
+    : `<strong>${scenario.name}</strong>`;
 
-  document.getElementById('counts-line').textContent =
-    `Dark Triad ${counts.T} · Influenced ${counts.I} · Neutral / grounded ${counts.N} · Turnover events ${getTurnoverEventCount()} · Firings ${getFiringEventCount()} · Exodus branches ${getExodusBranchCount()}${effectiveCounterweights === 0 ? ' · Accountability collapsed' : effectiveCounterweights < STATE.controls.counterweights ? ' · Accountability severely degraded' : ''}`;
+  document.getElementById('status-line').innerHTML =
+    `${head} · ${ORG_CONFIG.name} · ${timeText} · ${getTotalPeople()} ppl` +
+    ` · T${counts.T} I${counts.I} N${counts.N}` +
+    ` · Capture ${captureText}` +
+    ` · CW ${effectiveCounterweights}/100${cwSuffix}` +
+    ` · <span title="Attrition — voluntary departures cumulative">⟲${getTurnoverEventCount()}</span>` +
+    ` <span title="Firings — involuntary removals cumulative">✕${getFiringEventCount()}</span>` +
+    ` <span title="Exodus branches — lanes hemorrhaging grounded staff">⤴${getExodusBranchCount()}</span>` +
+    govSuffix;
 
   document.getElementById('timeMonths').value = STATE.timeMonths;
   document.getElementById('timeMonths-val').textContent = timeText;
@@ -4057,9 +4075,9 @@ function updateUiText() {
   } else if (STATE.timeMonths <= 24) {
     note.textContent = 'Year 1-2: leaders begin selecting reports who fit the local culture. Grounded neutral VPs, directors, and managers under hostile bosses attempt to shield their direct reports; counterweights make that easier, operating pressure makes it harder. Shielding persists until that leader is fired, turns over, or is manually changed - and it raises their own risk.';
   } else if (STATE.timeMonths <= 36) {
-    note.textContent = 'Year 2–3: hiring, promotion, and turnover begin changing who remains. Toxic branches now build exodus pressure gradually; once it gets high enough, neutral people start leaving in waves instead of tripping a cartoon cliff.';
+    note.textContent = 'Year 2–3: hiring, promotion, and attrition begin changing who remains. Toxic branches now build exodus pressure gradually; once it gets high enough, neutral people start leaving in waves instead of tripping a cartoon cliff.';
   } else {
-    note.textContent = 'Years 3-5: turnover compounds, exodus pressure can hollow out toxic branches, grounded leaders can shield teams, reduce capture below them, and remove trait-led direct reports when the system gives them cover.';
+    note.textContent = 'Years 3-5: attrition compounds, exodus pressure can hollow out toxic branches, grounded leaders can shield teams, reduce capture below them, and remove trait-led direct reports when the system gives them cover.';
   }
 
   if (STATE.tippingCrossedMonth != null && STATE.timeMonths >= STATE.tippingCrossedMonth) {
@@ -4390,7 +4408,7 @@ function focusSubtree(rootId) {
 ` +
     `Influenced: ${counts.I}
 ` +
-    `Turnover events: ${getTurnoverEventCount(ids)}\n` +
+    `Attrition events: ${getTurnoverEventCount(ids)}\n` +
     `Firing events: ${getFiringEventCount(ids)}\n` +
     `Neutral / grounded: ${counts.N}\n` +
     `Grounded occupants: ${resistantPockets}
@@ -4499,7 +4517,7 @@ function bindInputTooltips() {
     ],
     operatingPressure: [
       'Operating Pressure',
-      '<strong>Doctrine, incentives, hiring, and promotion pressure.</strong> This combines the company’s excuse system with what it actually rewards. Low means stakeholder norms, balanced rewards, and real concern for harm. High means ends-justify-means doctrine, financial extraction pressure, promotions for hard-charging behavior, selection for loyal/aligned replacements, and weak concern for turnover, retaliation, or quality damage.'
+      '<strong>Doctrine, incentives, hiring, and promotion pressure.</strong> This combines the company’s excuse system with what it actually rewards. Low means stakeholder norms, balanced rewards, and real concern for harm. High means ends-justify-means doctrine, financial extraction pressure, promotions for hard-charging behavior, selection for loyal/aligned replacements, and weak concern for attrition, retaliation, or quality damage.'
     ],
     counterweights: [
       'Accountability / Counterweights',
